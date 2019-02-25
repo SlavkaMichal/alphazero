@@ -6,12 +6,10 @@ from const import SIZE, SHAPE, CPUCT
 __version__ = '0.0.1'
 
 cmcts = Extension('cmcts',
-        #['module.cpp','cmcts.h','cmcts.cpp','state.cpp','state.h'],
         ['module.cpp','cmcts.cpp','node.cpp'],
-        #['cmcts.cpp'],
         include_dirs = [get_include(), get_include(True)],
         language = 'c++',
-        extra_compile_args = ['-std=c++11'],
+        extra_compile_args = ['-std=c++14', '-Werror', '-fvisibility=hidden', '-DHEUR'],
         extra_link_args = ['-lgsl', '-lgslcblas', '-lm'],
         define_macros=[
             ('SIZE', SIZE),
