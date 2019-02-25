@@ -4,17 +4,20 @@
 
 Node::Node() :
 	nodeN(-1),
-	edgeN(),
-	edgeW(),
+	child_cnt(0),
+	last_action(-1),
 	edgeP(),
 	children(),
-	last_action(-1)
+	edgeN(),
+	edgeW()
 {}
 
 Node::~Node()
 {
-	for (int i = 0; i < SIZE; i++)
+	for (int i = 0; i < SIZE; i++){
 		delete children[i];
+		children[i] = nullptr;
+	}
 	return;
 }
 
@@ -25,8 +28,29 @@ Node::set_prior(py::array_t<float> p, double *dir)
 	float *ptr = (float *)buff.ptr;
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
-	for (int i = 0; i < SIZE; i++)
-		edgeP[i] = ptr[i]+dir[i];
+	for (int i = 0; i < SIZE; i++){
+		// dir sum to 1 also p should
+		edgeP[i] = 0.75*ptr[i]+0.25*dir[i];
+	}
+
+	nodeN = 0;
+	return;
+}
+
+void
+Node::set_prior(std::array<double, 2*SIZE> &hboard)
+{
+	float sum = 0.;
+	for (int i = 0; i < SIZE; i++){
+		edgeP[i] = hboard[SIZE+i]+hboard[SIZE+i];
+		sum += edgeP[i];
+	}
+	for (int i = 0; i < SIZE; i++){
+		if (sum != 0)
+			edgeP[i] = edgeP[i]/sum;
+		else
+			edgeP[i] = 1./SIZE;
+	}
 
 	nodeN = 0;
 	return;
@@ -88,18 +112,26 @@ Node::select(Board &board)
 struct Node*
 Node::next_node(int action)
 {
-	Node *ret = nullptr;
 	last_action = action;
 
 	if (children[action] == nullptr){
+		children[action] = new Node();
+		child_cnt += 1;
+	}
+
+	return children[action];
+}
+
+struct Node*
+Node::make_move(int action)
+{
+	Node *ret = children[action];
+
+	if (ret == nullptr){
 		ret = new Node();
+		child_cnt += 1;
 	}
-	else{
-		/* save pointer to a new node */
-		ret = children[action];
-		/* remove reference to the node so it won't be deleted with other chil nodes */
-		children[action] = nullptr;
-	}
+	children[action] = nullptr;
 
 	return ret;
 }
@@ -108,4 +140,49 @@ std::array<int, SIZE>*
 Node::counts()
 {
 	return &edgeN;
+}
+
+std::string
+Node::repr()
+{
+	std::string s;
+	int sum = 0;
+	float sumf = 0;
+
+	s.append("Visits: "+std::to_string(nodeN)+"\n");
+	s.append("Child count: "+std::to_string(child_cnt)+"\n");
+	s.append("Last action: "+std::to_string(last_action)+"\n");
+	s.append("\nCounts:\n");
+	for (int i=0; i<SHAPE; i++){
+		for (int j=0; j<SHAPE; j++){
+			s.append(std::to_string(edgeN[i*SHAPE+j])+" ");
+			sum += edgeN[i*SHAPE+j];
+		}
+		s.append("\n");
+	}
+	s.append("\nCounts total: "+std::to_string(sum)+"\n");
+
+	sum = 0;
+	s.append("\nProbs:\n");
+	for (int i=0; i<SHAPE; i++){
+		for (int j=0; j<SHAPE; j++){
+			s.append(std::to_string(edgeP[i*SHAPE+j])+" ");
+			sumf += edgeP[i*SHAPE+j];
+		}
+		s.append("\n");
+	}
+	s.append("\nProbs total: "+std::to_string(sumf)+"\n");
+
+	sumf = 0;
+	s.append("\nTotal edge values:\n");
+	for (int i=0; i<SHAPE; i++){
+		for (int j=0; j<SHAPE; j++){
+			s.append(std::to_string(edgeW[i*SHAPE+j])+" ");
+			sumf += edgeW[i*SHAPE+j];
+		}
+		s.append("\n");
+	}
+	s.append("\nSum of total edge values: "+std::to_string(sumf)+"\n");
+
+	return s;
 }
