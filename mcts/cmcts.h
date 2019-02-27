@@ -31,17 +31,19 @@ private:
 	void search(void);               // run one search starting from initial node
 
 	Node* root_node = nullptr; // game node
-	int root_player;
-	int root_move_cnt;
-	Board root_board;
 	double *alpha;
 	gsl_rng *r;
-
 	std::function<py::tuple(py::array_t<float>, py::dict)> predict;     // predict function
 	py::dict data;       // data passed to predict function
+
+	Board root_board;
+	int root_player;
+	int root_move_cnt;
+
+	// TODO zbavit sa tychto veci, nemali by byt sucastou objektu
+	Board board;
 	int player;
 	int move_cnt;
-	Board board;
 
 #ifdef HEUR
 	float rollout();

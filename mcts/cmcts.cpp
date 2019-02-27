@@ -13,11 +13,15 @@ namespace py = pybind11;
 Cmcts::Cmcts(int seed) :
 	root_player(0),
 	root_move_cnt(0),
-	root_board{}
+	player(0),
+	move_cnt(0)
 {
 	root_node = new Node();
 	const gsl_rng_type *T;
 	gsl_rng_env_setup();
+	std::fill(root_board.data(), root_board.data()+2*SIZE, 0);
+	board = root_board;
+	player =  root_player;
 
 	T = gsl_rng_default;
 	r = gsl_rng_alloc(T);
@@ -51,12 +55,15 @@ Cmcts::clear(void)
 	delete root_node;
 	root_node = new Node();
 	std::fill(root_board.data(), root_board.data()+2*SIZE, 0);
+	root_player = 0;
+	root_move_cnt = 0;
+	std::fill(board.data(), board.data()+2*SIZE, 0);
+	player = 0;
+	move_cnt = 0;
+
 #ifdef HEUR
 	std::fill(root_hboard.data(), root_hboard.data()+2*SIZE, 1);
 #endif
-	//root_board.fill(0);
-	root_player = 0;
-	root_move_cnt = 0;
 	return;
 }
 
@@ -193,6 +200,7 @@ Cmcts::make_move(int action)
 	root_hboard = hboard;
 #endif
 	player = root_player;
+	board  = root_board;
 
 	delete old_node;
 	return;
@@ -202,12 +210,15 @@ py::array_t<float>
 Cmcts::nn_input()
 {
 	auto b = new std::vector<float>(board.begin(),board.end());
+	for (size_t i = 0; i < b->size(); i++){
+		std::cout << b->at(i) << ":" <<board[i] << " ";
+	}
 	if (player == 1)
 		std::swap_ranges(b->begin(), b->begin()+SIZE, b->begin() + SIZE);
 
 	auto capsule = py::capsule(b, [](void *b) { delete reinterpret_cast<std::vector<float>*>(b);});
 
-	return py::array_t<float>(b->size(), b->data(), capsule);
+	return py::array_t<float>(std::vector<ptrdiff_t>{1,2,SHAPE,SHAPE}, b->data(), capsule);
 }
 
 float
@@ -336,7 +347,7 @@ Cmcts::is_end()
 float
 Cmcts::rollout()
 {
-	int action;
+	int action = 0;
 	float v = 0;
 	double max = 0;
 	double h = 0;
@@ -577,6 +588,7 @@ Cmcts::repr()
 		s.append("Heuristic: no\n");
 
 	s.append("Move count: "+std::to_string(root_move_cnt)+"\n");
+	s.append("Board size: "+std::to_string(SIZE)+"\n");
 	s.append("Board:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++)
