@@ -468,153 +468,127 @@ Cmcts::update(int action)
 	int l, r;
 	int lbound, rbound;
 	int x, y, tmp;
-	int op = this->player;
-	int player = this->player == 1 ? 0 : 1;
+	int op = this->player == 1 ? SIZE : 0;
+	int player = this->player == 1 ? 0 : SIZE;
+	int step;
 	int reward;
 
 	y = action/SHAPE;
 	x = action%SHAPE;
 	hboard[SIZE+action] = 0;
 	hboard[action] = 0;
+
 	// horizontal -
 	l = action-1;
 	r = action+1;
 	lbound = l;
 	rbound = r;
+	step = 1;
 
-	tmp = (y+1)*SHAPE;
-	while (tmp > rbound && !board[op*SIZE+rbound]) ++rbound;
 	tmp = y*SHAPE-1;
-	while (tmp < lbound && !board[op*SIZE+lbound]) --lbound;
+	while (tmp < lbound && !board[op+lbound]) lbound -= step;
+	tmp = (y+1)*SHAPE;
+	while (tmp > rbound && !board[op+rbound]) rbound += step;
 
+	while (lbound < l && board[player+l]) l -= step;
+	while (rbound > r && board[player+r]) r += step;
 	if (rbound-lbound > 5){
-		while (lbound < l && board[player*SIZE+l]) --l;
-		while (rbound > r && board[player*SIZE+r]) ++r;
 		reward = r-l-1;
-		if (lbound != l && (hboard[l]||hboard[SIZE+l])){
-			hboard.at(player*SIZE+l) += std::pow(4, reward);
-			if (action-l-1 != 0)
-				hboard.at(player*SIZE+l) -= std::pow(4, action-l-1);
-		}
-		if (rbound != r && (hboard[r]||hboard[SIZE+r])){
-			hboard.at(player*SIZE+r) += std::pow(4, reward);
-			if (r-action-1 != 0)
-				hboard.at(player*SIZE+r) -= std::pow(4, r-action-1);
-		}
-
+		if (lbound != l)
+			hboard.at(player+l) += std::pow(4, reward);
+		if (rbound != r)
+			hboard.at(player+r) += std::pow(4, reward);
 	}
-	else // you can't make 5 in row here
-		while (++lbound < rbound) hboard.at(player*SIZE+lbound) = 0;
+	if (r-action-step > 0 && rbound != r)
+		hboard.at(player+r) -= std::pow(4, r-action-1);
+	if (action-l-step > 0 && lbound != l)
+		hboard.at(player+l) -= std::pow(4, action-l-1);
+
 
 	// vertical |
 	l = action-SHAPE;
 	r = action+SHAPE;
 	lbound = l;
 	rbound = r;
+	step = SHAPE;
 
 	tmp = x-SHAPE;
-	while (tmp < lbound && !board[op*SIZE+lbound]) lbound -= SHAPE;
+	while (tmp < lbound && !board[op+lbound]) lbound -= step;
 	tmp = x+SIZE;
-	while (tmp > rbound && !board[op*SIZE+rbound]) rbound += SHAPE;
+	while (tmp > rbound && !board[op+rbound]) rbound += step;
 
+	while (lbound < l && board[player+l]) l -= step;
+	while (rbound > r && board[player+r]) r += step;
 	if (rbound-lbound > 5*SHAPE){
-		while (lbound < l && board[player*SIZE+l]) l -= SHAPE;
-		while (rbound > r && board[player*SIZE+r]) r += SHAPE;
 		// y coordinate of bottom(r) minus y coordinate of top(l)
 		// vertical distance between r and l
 		reward = r/SHAPE-l/SHAPE-1;
-		if (lbound != l && (hboard[l]||hboard[SIZE+l])){
-			hboard.at(player*SIZE+l) += std::pow(4, reward);
-			if (action-l-SHAPE != 0)
-				hboard.at(player*SIZE+l) += std::pow(4, action/SHAPE-l/SHAPE-1);
-		}
-		if (rbound != r && (hboard[r]||hboard[SIZE+r])){
-			hboard.at(player*SIZE+r) += std::pow(4, reward);
-			if (r-action-SHAPE != 0)
-				hboard.at(player*SIZE+r) += std::pow(4, r/SHAPE-action/SHAPE-1);
-		}
-
+		if (lbound != l)
+			hboard.at(player+l) += std::pow(4, reward);
+		if (rbound != r)
+			hboard.at(player+r) += std::pow(4, reward);
 	}
-	else{ // you can't make 5 in row here
-		lbound += SHAPE;
-		while (lbound < rbound){
-			hboard.at(player*SIZE+lbound) = 0;
-			lbound += SHAPE;
-		}
-	}
+	if (r-action-step > 0 && rbound != r)
+		hboard.at(player+r) += std::pow(4, r/SHAPE - action/SHAPE-1);
+	if (action-l-step > 0 && lbound != l)
+		hboard.at(player+l) += std::pow(4, action/SHAPE - l/SHAPE-1);
 
 	/* lr diagonal \ */
 	l = action-SHAPE-1;
 	r = action+SHAPE+1;
 	lbound = l;
 	rbound = r;
+	step = SHAPE+1;
 
-	tmp = x > y ? action-(SHAPE+1)*(y+1) : action-(SHAPE+1)*(x+1);
-	while (tmp < lbound && !board[op*SIZE+lbound]) lbound -= (SHAPE+1);
-	tmp = x > y ? action+(SHAPE-x)*(SHAPE+1) : action+(SHAPE-y)*(SHAPE+1);
-	while (tmp > rbound && !board[op*SIZE+rbound]) rbound += (SHAPE+1);
+	tmp = x > y ? action-step*(y+1) : action-step*(x+1);
+	while (tmp < lbound && !board[op+lbound]) lbound -= step;
+	tmp = x > y ? action+(SHAPE-x)*step : action+(SHAPE-y)*step;
+	while (tmp > rbound && !board[op+rbound]) rbound += step;
 
+	while (lbound < l && board[player+l]) l -= step;
+	while (rbound > r && board[player+r]) r += step;
 	if (rbound/SHAPE-lbound/SHAPE > 5){
-		while (lbound < l && board[player*SIZE+l]) l -= (SHAPE+1);
-		while (rbound > r && board[player*SIZE+r]) r += (SHAPE+1);
 		// y coordinate of bottom(r) minus y coordinate of top(l)
 		// vertical distance between r and l
 		reward = r/SHAPE-l/SHAPE-1;
-		if (lbound != l && (hboard[l]||hboard[SIZE+l])){
-			hboard.at(player*SIZE+l) += std::pow(4, reward);
-			if (action/SHAPE-l/SHAPE-1 != 0)
-				hboard.at(player*SIZE+l) += std::pow(4, action/SHAPE-l/SHAPE-1);
-		}
-		if (rbound != r && (hboard[r]||hboard[SIZE+r])){
-			hboard.at(player*SIZE+r) += std::pow(4, reward);
-			if (r/SHAPE-action/SHAPE-1 != 0)
-				hboard.at(player*SIZE+r) += std::pow(4, r/SHAPE-action/SHAPE-1);
-		}
-
+		if (lbound != l)
+			hboard.at(player+l) += std::pow(4, reward);
+		if (rbound != r)
+			hboard.at(player+r) += std::pow(4, reward);
 	}
-	else{ // you can't make 5 in row here
-		lbound += SHAPE + 1;
-		while (lbound < rbound){
-		       hboard.at(player*SIZE+lbound) = 0;
-		       lbound += SHAPE + 1;
-		}
-	}
+	if (r-action-step > 0 && rbound != r)
+		hboard.at(player+r) += std::pow(4, r/SHAPE - action/SHAPE-1);
+	if (action-l-step > 0 && lbound != l)
+		hboard.at(player+l) += std::pow(4, action/SHAPE - l/SHAPE-1);
 
 	/* lr diagonal / */
 	l = action-SHAPE+1;
 	r = action+SHAPE-1;
 	lbound = l;
 	rbound = r;
+	step = SHAPE-1;
 
-	tmp = x > y ? action-(SHAPE-1)*(y+1) : action-(SHAPE-1)*(x+1);
-	while (tmp < lbound && !board[op*SIZE+lbound]) lbound -= (SHAPE-1);
-	tmp = x > y ? action+(SHAPE-x)*(SHAPE-1) : action+(SHAPE-y)*(SHAPE-1);
-	while (tmp > rbound && !board[op*SIZE+rbound]) rbound += (SHAPE-1);
+	tmp = x > y ? action-step*(y+1) : action-step*(x+1);
+	while (tmp < lbound && !board[op+lbound]) lbound -= step;
+	tmp = x > y ? action+(SHAPE-x)*step : action+(SHAPE-y)*step;
+	while (tmp > rbound && !board[op+rbound]) rbound += step;
 
+	while (lbound < l && board[player+l]) l -= step;
+	while (rbound > r && board[player+r]) r += step;
 	if (rbound/SHAPE-lbound/SHAPE > 5){
-		while (lbound < l && board[player*SIZE+l]) l -= (SHAPE-1);
-		while (rbound > r && board[player*SIZE+r]) r += (SHAPE-1);
 		// y coordinate of bottom(r) minus y coordinate of top(l)
 		// vertical distance between r and l
 		reward = r/SHAPE-l/SHAPE-1;
-		if (lbound != l && (hboard[l]||hboard[SIZE+l])){
-			hboard.at(player*SIZE+l) += std::pow(4, reward);
-			if (action/SHAPE-l/SHAPE-1 != 0)
-				hboard.at(player*SIZE+l) += std::pow(4, action/SHAPE-l/SHAPE-1);
-		}
-		if (rbound != r && (hboard[r]||hboard[SIZE+r])){
-			hboard.at(player*SIZE+r) += std::pow(4, reward);
-			if (r/SHAPE-action/SHAPE-1 != 0)
-				hboard.at(player*SIZE+r) += std::pow(4, r/SHAPE-action/SHAPE-1);
-		}
+		if (lbound != l)
+			hboard.at(player+l) += std::pow(4, reward);
+		if (rbound != r)
+			hboard.at(player+r) += std::pow(4, reward);
 	}
-	else{ // you can't make 5 in row here
-		lbound += (SHAPE - 1);
-		while (lbound < rbound){
-		       hboard.at(player*SIZE+lbound) = 0;
-		       lbound += (SHAPE - 1);
-		}
-	}
+	if (r-action-step > 0 && rbound != r)
+		hboard.at(player+r) += std::pow(4, r/SHAPE - action/SHAPE-1);
+	if (action-l-step > 0 && lbound != l)
+		hboard.at(player+l) += std::pow(4, action/SHAPE - l/SHAPE-1);
+
 	return;
 }
 
