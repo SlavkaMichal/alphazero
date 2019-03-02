@@ -9,6 +9,7 @@
 #include <cmath>
 #include <math.h>
 #include <string>
+#include <memory>
 
 namespace py = pybind11;
 using Board = std::array<int, SIZE*2>;
@@ -22,17 +23,21 @@ public:
 	void set_prior(py::array_t<float> p, double* dir);
 	void set_prior(std::array<double, 2*SIZE> &hboard);
 	std::array<int, SIZE>* counts();
+	void prt_name();
 	std::string repr();
+	bool is_null(int a);
 	int nodeN;
-	int child_cnt;
-	int last_action;
-	float edgeP[SIZE];
-	struct Node* children[SIZE];
 
-	Node();
+	Node(std::string &name, int a);
 	~Node();
 private:
+	std::string name;
+	struct Node* children[SIZE];
+	std::array<std::unique_ptr<Node>, SIZE> child;
+	int last_action;
+	int child_cnt;
 	std::array<int, SIZE> edgeN;
+	float edgeP[SIZE];
 	float edgeW[SIZE];
 };
 
