@@ -23,7 +23,6 @@ public:
 	void set_prior(py::array_t<float> p, double* dir);
 	void set_prior(std::array<double, 2*SIZE> &hboard);
 	std::array<int, SIZE>* counts();
-	void prt_name();
 	std::string repr();
 	bool is_null(int a);
 	int nodeN;

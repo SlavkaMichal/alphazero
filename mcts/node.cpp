@@ -2,7 +2,8 @@
 #include <cmath>
 #include <math.h>
 
-Node::Node(std::string &name, int a) :
+Node::
+Node(std::string &name, int a) :
 	nodeN(-1),
 	child{},
 	last_action(-1),
@@ -11,21 +12,21 @@ Node::Node(std::string &name, int a) :
 	edgeP(),
 	edgeW()
 {
-	std::cout << "Creating node ";
 	if (a == -1)
 		this->name = name;
 	else
 		this->name = name+":"+std::to_string(a);
-	std::cout << this->name <<std::endl;
+	//std::cout << "Creating node " << this->name <<std::endl;
 }
 
-Node::~Node()
+Node::
+~Node()
 {
-	std::cout << "Deleting node " << this->name <<std::endl;
+	//std::cout << "Deleting node " << this->name <<std::endl;
 }
 
-void
-Node::set_prior(py::array_t<float> p, double *dir)
+void Node::
+set_prior(py::array_t<float> p, double *dir)
 {
 	auto buff = p.request();
 	float *ptr = (float *)buff.ptr;
@@ -41,14 +42,7 @@ Node::set_prior(py::array_t<float> p, double *dir)
 }
 
 void Node::
-prt_name()
-{
-	std::cout << "Node name: " << name << std::endl;
-	return;
-}
-
-void
-Node::set_prior(std::array<double, 2*SIZE> &hboard)
+set_prior(std::array<double, 2*SIZE> &hboard)
 {
 	float sum = 0.;
 	for (int i = 0; i < SIZE; i++){
@@ -66,8 +60,8 @@ Node::set_prior(std::array<double, 2*SIZE> &hboard)
 	return;
 }
 
-void
-Node::backpropagate(float value)
+void Node::
+backpropagate(float value)
 {
 	if (last_action == -1)
 		throw std::runtime_error("No action chosen from this node");
@@ -81,8 +75,8 @@ Node::backpropagate(float value)
 	return;
 }
 
-int
-Node::select(Board &board)
+int Node::
+select(Board &board)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
@@ -115,8 +109,8 @@ Node::select(Board &board)
 	return best_a;
 }
 
-struct Node*
-Node::next_node(int action)
+struct Node* Node::
+next_node(int action)
 {
 	if (child[action]==nullptr){
 		child[action] = std::unique_ptr<Node>(new Node(name,action));
@@ -126,8 +120,8 @@ Node::next_node(int action)
 	return child[action].get();
 }
 
-bool
-Node::is_null(int a)
+bool Node::
+is_null(int a)
 {
 	if (a < 0 || a >= SIZE)
 		throw std::runtime_error("Index is out of bounds");
@@ -137,8 +131,8 @@ Node::is_null(int a)
 	return false;
 }
 
-struct Node*
-Node::make_move(int action)
+struct Node* Node::
+make_move(int action)
 {
 	Node *ret = child[action].release();
 
@@ -150,14 +144,14 @@ Node::make_move(int action)
 	return ret;
 }
 
-std::array<int, SIZE>*
-Node::counts()
+std::array<int, SIZE>* Node::
+counts()
 {
 	return &edgeN;
 }
 
-std::string
-Node::repr()
+std::string Node::
+repr()
 {
 	std::string s;
 	int sum = 0;
