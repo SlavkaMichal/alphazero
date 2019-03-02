@@ -5,7 +5,7 @@
 MAJOR = 0
 MINOR = 1
 # dimensions of board
-SHAPE = 13
+SHAPE = 9
 
 # number of positions on board
 SIZE = SHAPE*SHAPE

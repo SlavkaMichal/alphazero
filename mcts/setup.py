@@ -3,11 +3,12 @@ from setuptools.command import build_ext
 from pybind11 import get_include
 from os.path import dirname
 import sys
-
 sys.path.append(dirname(sys.path[0]))
 from config import SIZE, SHAPE, CPUCT, RANDOM, HEUR, DEBUG
 from config import MINOR, MAJOR
 
+print("Installing with parameters:")
+print("\tsize: {}, shape: {}x{}".format(SIZE,SHAPE,SHAPE))
 __version__ = "{:02d}.{:02d}".format(MAJOR, MINOR)
 
 extra_compile_args = ['-std=c++14', '-Werror', '-fvisibility=hidden', ]

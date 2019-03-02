@@ -2,23 +2,26 @@
 #include <cmath>
 #include <math.h>
 
-Node::Node() :
+Node::Node(std::string &name, int a) :
 	nodeN(-1),
-	child_cnt(0),
+	child{},
 	last_action(-1),
-	edgeP(),
-	children(),
+	child_cnt(0),
 	edgeN(),
+	edgeP(),
 	edgeW()
-{}
+{
+	std::cout << "Creating node ";
+	if (a == -1)
+		this->name = name;
+	else
+		this->name = name+":"+std::to_string(a);
+	std::cout << this->name <<std::endl;
+}
 
 Node::~Node()
 {
-	for (int i = 0; i < SIZE; i++){
-		delete children[i];
-		children[i] = nullptr;
-	}
-	return;
+	std::cout << "Deleting node " << this->name <<std::endl;
 }
 
 void
@@ -34,6 +37,13 @@ Node::set_prior(py::array_t<float> p, double *dir)
 	}
 
 	nodeN = 0;
+	return;
+}
+
+void Node::
+prt_name()
+{
+	std::cout << "Node name: " << name << std::endl;
 	return;
 }
 
@@ -101,37 +111,41 @@ Node::select(Board &board)
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
 
+	last_action = best_a;
 	return best_a;
-	//act = best_a;
-
-	//if (children[best_a] == nullptr)
-	//	children[best_a] = new Node();
-	//return children[best_a];
 }
 
 struct Node*
 Node::next_node(int action)
 {
-	last_action = action;
-
-	if (children[action] == nullptr){
-		children[action] = new Node();
+	if (child[action]==nullptr){
+		child[action] = std::unique_ptr<Node>(new Node(name,action));
 		child_cnt += 1;
 	}
 
-	return children[action];
+	return child[action].get();
+}
+
+bool
+Node::is_null(int a)
+{
+	if (a < 0 || a >= SIZE)
+		throw std::runtime_error("Index is out of bounds");
+
+	if (child[a]==nullptr)
+		return true;
+	return false;
 }
 
 struct Node*
 Node::make_move(int action)
 {
-	Node *ret = children[action];
+	Node *ret = child[action].release();
 
 	if (ret == nullptr){
-		ret = new Node();
+		ret = new Node(name, action);
 		child_cnt += 1;
 	}
-	children[action] = nullptr;
 
 	return ret;
 }
@@ -152,6 +166,7 @@ Node::repr()
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
 	s.append("Child count: "+std::to_string(child_cnt)+"\n");
 	s.append("Last action: "+std::to_string(last_action)+"\n");
+	s.append("Name: "+name+"\n");
 	s.append("\nCounts:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
