@@ -9,7 +9,7 @@ int test(int i)
 }
 
 PYBIND11_MODULE(cmcts, m) {
-	m.doc() = "This is documentation for cmts module";
+	m.doc() = "This is documentation for CMTS module";
 	m.def("test", &test, "Documentation for function");
 	py::class_<Cmcts>(m, "mcts")
 	.def(py::init<int>(), "seed"_a=0)
@@ -23,6 +23,7 @@ PYBIND11_MODULE(cmcts, m) {
 	.def_property_readonly("move_cnt", &Cmcts::get_move_cnt, "Number of played moves")
 	.def("is_end", &Cmcts::is_end, "Returns 0 if there are valid moves\n\t1 if player to move wins\n\t-1 if player to move lost")
 	.def("print_node", &Cmcts::print_node)
+	.def("print_u", &Cmcts::print_u)
 #ifdef HEUR
 	.def("print_heur", &Cmcts::print_heur)
 	.def("heur",  &Cmcts::get_heur, py::return_value_policy::take_ownership, "Current hboard")

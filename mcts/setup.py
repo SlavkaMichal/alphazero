@@ -9,7 +9,7 @@ from config import MINOR, MAJOR
 
 print("Installing with parameters:")
 print("\tsize: {}, shape: {}x{}".format(SIZE,SHAPE,SHAPE))
-__version__ = "{:02d}.{:02d}".format(MAJOR, MINOR)
+__version__ = "{}.{}".format(MAJOR, MINOR)
 
 extra_compile_args = ['-std=c++14', '-Werror', '-fvisibility=hidden', ]
 if HEUR:
@@ -36,8 +36,8 @@ setup(
         name='cmcts',
         version=__version__,
         author='Michal Slavka',
-        email='slavka.michal@gmail.com',
+#        email='slavka.michal@gmail.com',
         description='Monte Carlo Tree Search implementation for gomoku.',
         ext_modules=[ cmcts ],
-        cmd_class={'build_ext' : build_ext.build_ext}
+        cmdclass={'build_ext' : build_ext.build_ext}
         )
