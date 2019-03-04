@@ -3,6 +3,7 @@
 
 #include "node.h"
 #include <pybind11/numpy.h>
+#include <iostream>
 #include <string>
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
@@ -14,6 +15,7 @@ public:
 	void make_move(int action);      // change root_node by taking action
 	void make_move(int y, int x);
 	void print_node(std::vector<int> &v);
+	void print_u(std::vector<int> &v);
 	void clear(void);                // restore to initial node
 	void simulate(int n);            // run n searches
 	void set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::dict &d);

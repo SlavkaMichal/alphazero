@@ -42,7 +42,7 @@ set_prior(py::array_t<float> p, double *dir)
 }
 
 void Node::
-set_prior(std::array<double, 2*SIZE> &hboard)
+set_prior(std::array<double, 2*SIZE> &hboard, double* dir)
 {
 	float sum = 0.;
 	for (int i = 0; i < SIZE; i++){
@@ -50,10 +50,7 @@ set_prior(std::array<double, 2*SIZE> &hboard)
 		sum += edgeP[i];
 	}
 	for (int i = 0; i < SIZE; i++){
-		if (sum != 0)
-			edgeP[i] = edgeP[i]/sum;
-		else
-			edgeP[i] = 1./SIZE;
+		edgeP[i] = edgeP[i]/sum*0.9+dir[i]*0.1;
 	}
 
 	nodeN = 0;
@@ -156,6 +153,7 @@ repr()
 	std::string s;
 	int sum = 0;
 	float sumf = 0;
+	std::stringstream ss;
 
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
 	s.append("Child count: "+std::to_string(child_cnt)+"\n");
@@ -164,7 +162,9 @@ repr()
 	s.append("\nCounts:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			s.append(std::to_string(edgeN[i*SHAPE+j])+" ");
+			ss << std::setw(3) << std::setfill(' ') << edgeN[i*SHAPE+j];
+			s.append(ss.str()+" ");
+			ss.str(std::string());
 			sum += edgeN[i*SHAPE+j];
 		}
 		s.append("\n");
@@ -175,7 +175,9 @@ repr()
 	s.append("\nProbs:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			s.append(std::to_string(edgeP[i*SHAPE+j])+" ");
+			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << edgeP[i*SHAPE+j];
+			s.append(ss.str()+" ");
+			ss.str(std::string());
 			sumf += edgeP[i*SHAPE+j];
 		}
 		s.append("\n");
@@ -186,12 +188,66 @@ repr()
 	s.append("\nTotal edge values:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			s.append(std::to_string(edgeW[i*SHAPE+j])+" ");
+			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << edgeW[i*SHAPE+j];
+			s.append(ss.str()+" ");
+			ss.str(std::string());
 			sumf += edgeW[i*SHAPE+j];
 		}
 		s.append("\n");
 	}
 	s.append("\nSum of total edge values: "+std::to_string(sumf)+"\n");
+
+	return s;
+}
+
+std::string Node::
+print_u(Board &board)
+{
+	std::string s;
+	std::stringstream ss;
+	if (nodeN == -1)
+		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
+	int best_a = -1;
+	double u;
+	double best_u = -INFINITY;
+	s.append("Name: "+name+"\n");
+	s.append("\nTotal edge values:\n");
+	for (int i=0; i<SHAPE; i++){
+		for (int j=0; j<SHAPE; j++){
+			if (board[i*SHAPE+j] == 1 or board[i*SHAPE+j+SIZE] == 1){
+				s.append(" ___ ");
+				continue;
+			}
+			if (edgeN[i*SHAPE+j] != 0)
+				u = edgeW[i*SHAPE+j]/edgeN[i*SHAPE+j] + CPUCT*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8) / (edgeN[i*SHAPE+j] + 1);
+			else
+				u = CPUCT*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8);
+
+			if (u > best_u){
+				best_u = u;
+				best_a = i*SHAPE+j;
+			}
+			ss << std::setw(2) << std::fixed << std::setprecision(3) << std::setfill(' ') << u;
+			s.append(ss.str()+" ");
+			ss.str(std::string());
+		}
+		s.append("\n");
+	}
+	s.append("\nbest action: "+std::to_string(best_a)+"\n");
+
+	if (best_a == -1)
+		throw std::runtime_error("No action chosen. Incorrect behaviour");
+	s.append("Board:\n");
+	for (int i=0; i<SHAPE; i++){
+		for (int j=0; j<SHAPE; j++)
+			if (board[i*SHAPE+j] == 1)
+				s.append("x ");
+			else if (board[i*SHAPE+j+SIZE] == 1)
+				s.append("o ");
+			else
+				s.append("_ ");
+		s.append("\n");
+	}
 
 	return s;
 }
