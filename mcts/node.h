@@ -18,7 +18,7 @@ using Board = std::array<int, SIZE*2>;
 
 struct Node{
 public:
-	int select(Board &board);
+	int select(Board &board, double cpuct);
 	struct Node* next_node(int action);
 	struct Node* make_move(int action);
 	void backpropagate(float value);
@@ -26,7 +26,7 @@ public:
 	void set_prior(std::array<double, 2*SIZE> &hboard, double* dir);
 	std::array<int, SIZE>* counts();
 	std::string repr();
-	std::string print_u(Board &board);
+	std::string print_u(Board &board, double cpuct);
 	bool is_null(int a);
 	int nodeN;
 	std::string name;

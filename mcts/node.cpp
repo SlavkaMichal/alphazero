@@ -73,7 +73,7 @@ backpropagate(float value)
 }
 
 int Node::
-select(Board &board)
+select(Board &board, double cpuct)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
@@ -90,9 +90,11 @@ select(Board &board)
 		// TODO napisat ci pre toto test
 		if (board[a] != 0 or board[SIZE+a] != 0)
 			continue;
-		u = CPUCT * edgeP[a] * std::sqrt(nodeN + 1e-8) / (edgeN[a] + 1);
 		if (edgeN[a] != 0)
-			u = u + edgeW[a]/edgeN[a];
+			u = edgeW[a]/edgeN[a] + cpuct*edgeP[a]*std::sqrt(nodeN + 1e-8) / (edgeN[a] + 1);
+		else
+			u = cpuct*edgeP[a]*std::sqrt(nodeN + 1e-8);
+
 		if (u > best_u){
 			best_u = u;
 			best_a = a;
@@ -201,7 +203,7 @@ repr()
 }
 
 std::string Node::
-print_u(Board &board)
+print_u(Board &board, double cpuct)
 {
 	std::string s;
 	std::stringstream ss;
@@ -219,9 +221,9 @@ print_u(Board &board)
 				continue;
 			}
 			if (edgeN[i*SHAPE+j] != 0)
-				u = edgeW[i*SHAPE+j]/edgeN[i*SHAPE+j] + CPUCT*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8) / (edgeN[i*SHAPE+j] + 1);
+				u = edgeW[i*SHAPE+j]/edgeN[i*SHAPE+j] + cpuct*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8) / (edgeN[i*SHAPE+j] + 1);
 			else
-				u = CPUCT*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8);
+				u = cpuct*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8);
 
 			if (u > best_u){
 				best_u = u;

@@ -4,7 +4,7 @@ from pybind11 import get_include
 from os.path import dirname
 import sys
 sys.path.append(dirname(sys.path[0]))
-from config import SIZE, SHAPE, CPUCT, RANDOM, HEUR, DEBUG
+from config import SIZE, SHAPE, HEUR, DEBUG
 from config import MINOR, MAJOR
 
 print("Installing with parameters:")
@@ -14,8 +14,6 @@ __version__ = "{}.{}".format(MAJOR, MINOR)
 extra_compile_args = ['-std=c++14', '-Werror', '-fvisibility=hidden', ]
 if HEUR:
     extra_compile_args.append('-DHEUR')
-if RANDOM:
-    extra_compile_args.append('-DRAND')
 if DEBUG:
     extra_compile_args.append('-DDBG')
 
@@ -28,7 +26,6 @@ cmcts = Extension('cmcts',
         define_macros=[
             ('SIZE', SIZE),
             ('SHAPE', SHAPE),
-            ('CPUCT', CPUCT),
             ]
         )
 

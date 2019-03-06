@@ -10,7 +10,8 @@
 
 namespace py = pybind11;
 
-Cmcts::Cmcts(int seed) :
+Cmcts::Cmcts(long int seed, double alpha, double cpuct) :
+	cpuct(cpuct),
 	player(0),
 	move_cnt(0),
 	winner(-1.)
@@ -23,19 +24,17 @@ Cmcts::Cmcts(int seed) :
 
 	T = gsl_rng_default;
 	r = gsl_rng_alloc(T);
-#ifdef RANDOM
-	gsl_rng_set(r, time(NULL)+seed);
-#endif
+	gsl_rng_set(r, seed);
 #ifdef HEUR
 	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
 	hboard[SIZE/2] += 0.5;
 	hboard[SIZE+SIZE/2] += 0.5;
 #endif
-	alpha = new double[SIZE];
+	this->alpha = new double[SIZE];
 	dir_noise = new double[SIZE];
 	// x = avg_game_length = SHAPE*2
 	// 10/((SIZE*x-(x**2+x)*0.5)/x)
-	std::fill(alpha, alpha+SIZE, 1);
+	std::fill(this->alpha, this->alpha+SIZE, alpha);
 }
 
 Cmcts::~Cmcts(void)
@@ -47,7 +46,7 @@ Cmcts::~Cmcts(void)
 }
 
 void
-Cmcts::clear(void)
+Cmcts::clear()
 {
 	delete root_node;
 	std::string s = "R";
@@ -55,14 +54,19 @@ Cmcts::clear(void)
 	std::fill(board.data(), board.data()+2*SIZE, 0);
 	player = 0;
 	move_cnt = 0;
-	predict = nullptr;
-	std::fill(alpha, alpha+SIZE, 1);
 
 #ifdef HEUR
 	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
 	hboard[SIZE/2] += 0.5;
 	hboard[SIZE+SIZE/2] += 0.5;
 #endif
+	return;
+}
+
+void
+Cmcts::clear_predictor()
+{
+	predict = nullptr;
 	return;
 }
 
@@ -78,10 +82,23 @@ Cmcts::get_move_cnt()
 	return move_cnt;
 }
 
-float Cmcts::
-get_winner()
+float
+Cmcts::get_winner()
 {
 	return winner;
+}
+
+void
+Cmcts::set_cpuct(float cpuct)
+{
+	this->cpuct = cpuct;
+	return;
+}
+void
+Cmcts::set_alpha(double alpha)
+{
+	std::fill(this->alpha, this->alpha+SIZE, alpha);
+	return;
 }
 
 void
@@ -98,6 +115,13 @@ Cmcts::set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p
 
 
 void
+Cmcts::set_seed(unsigned long int seed)
+{
+	gsl_rng_set(r, time(NULL)+seed);
+	return;
+}
+
+void
 Cmcts::simulate(int n)
 {
 	// TODO skontrolovat ci toto kopiruje
@@ -109,6 +133,10 @@ Cmcts::simulate(int n)
 	float start_winner   = winner;
 #ifdef HEUR
 	std::array<double,2*SIZE> start_hboard = hboard;
+#else
+	if (predict == nullptr){
+		throw std::runtime_error("Predictor missing!");
+	}
 #endif
 
 	for (int i = 0; i < n; ++i){
@@ -121,10 +149,6 @@ Cmcts::simulate(int n)
 		hboard   = start_hboard;
 #endif
 	}
-
-#ifdef HEUR
-	hboard = start_hboard;
-#endif
 
 	return;
 }
@@ -149,23 +173,24 @@ Cmcts::search(void)
 		if (current->nodeN == -1){
 			/* node expansion */
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
+#ifdef HEUR
 			if (predict != nullptr){
 				prediction_t = predict(get_board(), data);
 				value = -prediction_t[0].cast<float>();
 				current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			}else{
-#ifdef HEUR
 				value = -rollout();
 				current->set_prior(hboard, dir_noise);
-#else
-				throw std::runtime_error("Predictor missing!");
-#endif
 			}
+#endif
+			prediction_t = predict(get_board(), data);
+			value = -prediction_t[0].cast<float>();
+			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			break;
 		}
 
 		/* select new node, if it's leaf then expand */
-		action = current->select(board);
+		action = current->select(board, cpuct);
 		board_move(action);
 		/* test if it is end state */
 		if (get_winner() != -1){
@@ -203,8 +228,8 @@ Cmcts::search(void)
 }
 
 
-void Cmcts::
-board_move(int action)
+void
+Cmcts::board_move(int action)
 {
 	int end = 0;
 	if (action >= SIZE || action < 0)
@@ -778,7 +803,8 @@ Cmcts::print_node(std::vector<int> &v)
 	return;
 }
 
-void Cmcts::print_u(std::vector<int> &v)
+void
+Cmcts::print_u(std::vector<int> &v)
 {
 	Node *n = root_node;
 	for (int i : v){
@@ -789,6 +815,6 @@ void Cmcts::print_u(std::vector<int> &v)
 		n = n->next_node(i);
 		std::cout << i << std::endl;
 	}
-	py::print(n->print_u(board));
+	py::print(n->print_u(board, cpuct));
 	return;
 }
