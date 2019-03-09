@@ -11,3 +11,12 @@ python setup.py install --prefix=$PREFIX
 popd
 touch mcts/.timestamp
 
+echo "Creating missing directories"
+if [ !-d "model" ]; then
+	echo "Creating model directory"
+	mkdir "model"
+fi
+if [ !-d "data" ]; then
+	echo "Creating data directory"
+	mkdir "data"
+fi
