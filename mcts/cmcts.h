@@ -3,6 +3,8 @@
 
 #include "node.h"
 #include <pybind11/numpy.h>
+#include <pybind11/embed.h>
+#include <pybind11/stl.h>
 #include <iostream>
 #include <string>
 #include <pybind11/pybind11.h>
@@ -19,7 +21,7 @@ public:
 	void clear(void);                // restore to initial node
 	void clear_predictor();
 	void simulate(int n);            // run n searches
-	void set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::dict &d);
+	void set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::object &d);
 	void set_seed(unsigned long int seed);
 	void set_alpha(double alpha);
 	void set_cpuct(float cpuct);
@@ -31,7 +33,7 @@ public:
 	py::array_t<float> get_prob();
 	py::array_t<float> get_board();
 	/* initialization function */
-	Cmcts(long int seed, double alpha, double cpuct);
+	Cmcts(uint64_t seed, double alpha, double cpuct);
 	~Cmcts(void);
 	std::string repr();
 
@@ -48,8 +50,8 @@ private:
 	double *dir_noise;
 	double cpuct;
 	gsl_rng *r;
-	std::function<py::tuple(py::array_t<float>, py::dict)> predict;     // predict function
-	py::dict data;       // data passed to predict function
+	std::function<py::tuple(py::array_t<float>, py::object)> predict;     // predict function
+	py::object data;       // data passed to predict function
 
 	// TODO zbavit sa tychto veci, nemali by byt sucastou objektu
 	Board board;

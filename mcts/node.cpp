@@ -3,7 +3,8 @@
 #include <math.h>
 
 Node::
-Node(std::string &name, int a) :
+//Node(std::string &name, int a) :
+Node() :
 	nodeN(-1),
 	child{},
 	last_action(-1),
@@ -12,11 +13,11 @@ Node(std::string &name, int a) :
 	edgeP(),
 	edgeW()
 {
-	if (a == -1)
-		this->name = name;
-	else
-		this->name = name+":"+std::to_string(a);
-	//std::cout << "Creating node " << this->name <<std::endl;
+//	if (a == -1)
+//		this->name = name;
+//	else
+//		this->name = name+":"+std::to_string(a);
+//	//std::cout << "Creating node " << this->name <<std::endl;
 }
 
 Node::
@@ -112,7 +113,8 @@ struct Node* Node::
 next_node(int action)
 {
 	if (child[action]==nullptr){
-		child[action] = std::unique_ptr<Node>(new Node(name,action));
+		child[action] = std::unique_ptr<Node>(new Node());
+		//child[action] = std::unique_ptr<Node>(new Node(name,action));
 		child_cnt += 1;
 	}
 
@@ -136,7 +138,8 @@ make_move(int action)
 	Node *ret = child[action].release();
 
 	if (ret == nullptr){
-		ret = new Node(name, action);
+		//ret = new Node(name, action);
+		ret = new Node();
 		child_cnt += 1;
 	}
 
@@ -160,7 +163,7 @@ repr()
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
 	s.append("Child count: "+std::to_string(child_cnt)+"\n");
 	s.append("Last action: "+std::to_string(last_action)+"\n");
-	s.append("Name: "+name+"\n");
+	//s.append("Name: "+name+"\n");
 	s.append("\nCounts:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
@@ -212,7 +215,7 @@ print_u(Board &board, double cpuct)
 	int best_a = -1;
 	double u;
 	double best_u = -INFINITY;
-	s.append("Name: "+name+"\n");
+	//s.append("Name: "+name+"\n");
 	s.append("\nTotal edge values:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
