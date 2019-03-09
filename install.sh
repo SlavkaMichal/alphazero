@@ -20,3 +20,7 @@ if [ !-d "data" ]; then
 	echo "Creating data directory"
 	mkdir "data"
 fi
+if [ !-d "logs" ]; then
+	echo "Creating logs directory"
+	mkdir "logs"
+fi
