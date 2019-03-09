@@ -29,18 +29,18 @@ public:
 	std::string print_u(Board &board, double cpuct);
 	bool is_null(int a);
 	int nodeN;
-	std::string name;
+//	std::string name;
 
-	Node(std::string &name, int a);
+	//Node(std::string &name, int a);
+	Node();
 	~Node();
 private:
-	struct Node* children[SIZE];
 	std::array<std::unique_ptr<Node>, SIZE> child;
 	int last_action;
 	int child_cnt;
 	std::array<int, SIZE> edgeN;
-	float edgeP[SIZE];
-	float edgeW[SIZE];
+	std::array<float, SIZE> edgeP;
+	std::array<float, SIZE> edgeW;
 };
 
 #endif

@@ -10,14 +10,13 @@
 
 namespace py = pybind11;
 
-Cmcts::Cmcts(long int seed, double alpha, double cpuct) :
+Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 	cpuct(cpuct),
 	player(0),
 	move_cnt(0),
 	winner(-1.)
 {
-	std::string s = "R";
-	root_node = new Node(s,-1);
+	root_node = new Node();
 	const gsl_rng_type *T;
 	gsl_rng_env_setup();
 	std::fill(board.data(), board.data()+2*SIZE, 0);
@@ -49,8 +48,7 @@ void
 Cmcts::clear()
 {
 	delete root_node;
-	std::string s = "R";
-	root_node = new Node(s,-1);
+	root_node = new Node();
 	std::fill(board.data(), board.data()+2*SIZE, 0);
 	player = 0;
 	move_cnt = 0;
@@ -102,7 +100,7 @@ Cmcts::set_alpha(double alpha)
 }
 
 void
-Cmcts::set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::dict &d)
+Cmcts::set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::object &d)
 {
 	predict = p;
 	data    = d;
@@ -182,11 +180,12 @@ Cmcts::search(void)
 				value = -rollout();
 				current->set_prior(hboard, dir_noise);
 			}
-#endif
+#else
 			prediction_t = predict(get_board(), data);
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			break;
+#endif
 		}
 
 		/* select new node, if it's leaf then expand */
@@ -500,13 +499,13 @@ Cmcts::rollout()
 void
 Cmcts::update(int action)
 {
-	int l, r;
-	int lbound, rbound;
-	int x, y, tmp;
+	int l = 0, r = 0;
+	int lbound = 0, rbound = 0;
+	int x = 0, y = 0, tmp = 0;
 	int op = this->player == 1 ? SIZE : 0;
 	int player = this->player == 1 ? 0 : SIZE;
-	int step;
-	int reward;
+	int step = 0;
+	int reward = 0;
 
 	y = action/SHAPE;
 	x = action%SHAPE;
