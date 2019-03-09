@@ -2,14 +2,27 @@ import sys
 import os
 
 # number of simulations performed by MCTS
-SIMS = 3000
+SIMS = 100
 
 # how many training examples should be generated
-TRAIN_SAMPLES = 1000
+# optimally tens of thousands
+TRAIN_SAMPLES = 1
 
 # parameter influencing generating of dirichlet noise
-ALPHA =
+# x = avg_game_length = SHAPE*2
+# alpha = 10/((SIZE*x-(x**2+x)*0.5)/x)
+ALPHA = 0.1
 
+# c constant in PUCT algorithm
+CPUCT = 4.
+
+# number of epochs
+EPOCHS = 2
+
+# number of generations to train from
+# size of window is increasing by one every n generations
+# (starting window, max window, n)
+WINDOW = (4,2,20)
 
 ##############################################################################
 #     IF YOU CHANGE ANY OF THE VARIABLES BELLOW YOU MUST RUN ./install.sh    #
