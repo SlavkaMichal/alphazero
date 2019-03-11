@@ -2,6 +2,7 @@
 #define __CMCTS_H__
 
 #include "node.h"
+#include "state.h"
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
@@ -11,6 +12,7 @@
 #include <pybind11/functional.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+#include <thread>
 
 struct Cmcts{
 public:
@@ -26,7 +28,6 @@ public:
 	void set_alpha(double alpha);
 	void set_cpuct(float cpuct);
 	/* use of this function is depriciated use get_winner instead */
-	float is_end();               // check if game is over
 	float get_winner();
 	int   get_player();
 	int   get_move_cnt();
@@ -40,30 +41,21 @@ public:
 #ifdef HEUR
 	py::array_t<float> get_heur();
 	void print_heur();
+	float rollout();
 #endif
 private:
-	void search(void);               // run one search starting from initial node
-	void board_move(int action);
+	void worker(int n);               // run one search starting from initial node
+	void search(State *state);               // run one search starting from initial node
+	//void board_move(int action);
 
-	Node* root_node = nullptr; // game node
+	Node   *root_node = nullptr; // game node
+	State  *state;
 	double *alpha;
 	double *dir_noise;
 	double cpuct;
 	gsl_rng *r;
 	std::function<py::tuple(py::array_t<float>, py::object)> predict;     // predict function
 	py::object data;       // data passed to predict function
-
-	// TODO zbavit sa tychto veci, nemali by byt sucastou objektu
-	Board board;
-	int player;
-	int move_cnt;
-	float winner;
-
-#ifdef HEUR
-	float rollout();
-	void  update(int action);
-	std::array<double,2*SIZE> hboard;
-#endif
 };
 
 #endif

@@ -5,6 +5,7 @@ using namespace pybind11::literals;
 
 int test(int i)
 {
+	std::cout << MAJOR << "." << MINOR << std::endl;
 	return i+1;
 }
 
@@ -23,9 +24,8 @@ PYBIND11_MODULE(cmcts, m) {
 	.def("make_move", py::overload_cast<int,int>(&Cmcts::make_move), "y"_a, "x"_a, "Make move")
 	.def("make_move", py::overload_cast<int>(&Cmcts::make_move), "Make move")
 	.def_property_readonly("player", &Cmcts::get_player, "Player to move")
-	.def_property_readonly("winner", &Cmcts::get_winner, "Player to move")
+	.def_property_readonly("winner", &Cmcts::get_winner, "Winner of the game")
 	.def_property_readonly("move_cnt", &Cmcts::get_move_cnt, "Number of played moves")
-	.def("is_end", &Cmcts::is_end, "Returns 0 if there are valid moves\n\t1 if player to move wins\n\t-1 if player to move lost")
 	.def("print_node", &Cmcts::print_node)
 	.def("print_u", &Cmcts::print_u)
 #ifdef HEUR

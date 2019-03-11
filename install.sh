@@ -12,15 +12,15 @@ popd
 touch mcts/.timestamp
 
 echo "Creating missing directories"
-if [ !-d "model" ]; then
+if [ ! -d "model" ]; then
 	echo "Creating model directory"
 	mkdir "model"
 fi
-if [ !-d "data" ]; then
+if [ ! -d "data" ]; then
 	echo "Creating data directory"
 	mkdir "data"
 fi
-if [ !-d "logs" ]; then
+if [ ! -d "logs" ]; then
 	echo "Creating logs directory"
 	mkdir "logs"
 fi
