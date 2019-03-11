@@ -11,26 +11,19 @@
 namespace py = pybind11;
 
 Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
-	cpuct(cpuct),
-	player(0),
-	move_cnt(0),
-	winner(-1.)
+	cpuct(cpuct)
 {
 	root_node = new Node();
+	state     = new State();
+
 	const gsl_rng_type *T;
 	gsl_rng_env_setup();
-	std::fill(board.data(), board.data()+2*SIZE, 0);
-
 	T = gsl_rng_default;
 	r = gsl_rng_alloc(T);
 	gsl_rng_set(r, seed);
-#ifdef HEUR
-	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
-	hboard[SIZE/2] += 0.5;
-	hboard[SIZE+SIZE/2] += 0.5;
-#endif
+
 	this->alpha = new double[SIZE];
-	dir_noise = new double[SIZE];
+	dir_noise   = new double[SIZE];
 	// x = avg_game_length = SHAPE*2
 	// 10/((SIZE*x-(x**2+x)*0.5)/x)
 	std::fill(this->alpha, this->alpha+SIZE, alpha);
@@ -39,6 +32,7 @@ Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 Cmcts::~Cmcts(void)
 {
 	delete root_node;
+	delete state;
 	gsl_rng_free(r);
 	delete[] alpha;
 	delete[] dir_noise;
@@ -49,15 +43,8 @@ Cmcts::clear()
 {
 	delete root_node;
 	root_node = new Node();
-	std::fill(board.data(), board.data()+2*SIZE, 0);
-	player = 0;
-	move_cnt = 0;
 
-#ifdef HEUR
-	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
-	hboard[SIZE/2] += 0.5;
-	hboard[SIZE+SIZE/2] += 0.5;
-#endif
+	state->clear();
 	return;
 }
 
@@ -71,19 +58,19 @@ Cmcts::clear_predictor()
 int
 Cmcts::get_player()
 {
-	return player;
+	return state->player;
 }
 
 int
 Cmcts::get_move_cnt()
 {
-	return move_cnt;
+	return state->move_cnt;
 }
 
 float
 Cmcts::get_winner()
 {
-	return winner;
+	return state->winner;
 }
 
 void
@@ -111,7 +98,6 @@ Cmcts::set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p
 	return;
 }
 
-
 void
 Cmcts::set_seed(unsigned long int seed)
 {
@@ -122,40 +108,59 @@ Cmcts::set_seed(unsigned long int seed)
 void
 Cmcts::simulate(int n)
 {
-	// TODO skontrolovat ci toto kopiruje
+	//int th_num = THREADS;
 	if (n < 1)
-		throw std::runtime_error("Invalid input "+std::to_string(n)+" must be at leas 1!");
-	Board start_board    = board;
-	int   start_player   = player;
-	int   start_move_cnt = move_cnt;
-	float start_winner   = winner;
-#ifdef HEUR
-	std::array<double,2*SIZE> start_hboard = hboard;
-#else
+		throw std::runtime_error("Invalid input "+std::to_string(n)+" must be at least 1!");
+#ifndef HEUR
 	if (predict == nullptr){
 		throw std::runtime_error("Predictor missing!");
 	}
 #endif
 
-	for (int i = 0; i < n; ++i){
-		search();
-		board    = start_board;
-		player   = start_player;
-		move_cnt = start_move_cnt;
-		winner   = start_winner;
-#ifdef HEUR
-		hboard   = start_hboard;
-#endif
-	}
+	// divide workload
+	//if (n < th_num){
+	//	th_num = n;
+	//	n = 1;
+	//}
+	//else if (n % th_num == 0)
+	//	n = n/th_num;
+	//else
+	//	n = n/th_num + 1;
 
+	py::gil_scoped_release release;
+	//std::thread *threads = new std::thread[th_num];
+
+	//for (int i = 0; i < th_num; i++){
+	//	threads[i] = std::thread(&Cmcts::worker, this, n);
+	//}
+	//for (int i = 0; i< th_num; i++){
+	//	threads[i].join();
+	//}
+
+	worker(n);
+	//delete[] threads;
 	return;
 }
 
 void
-Cmcts::search(void)
+Cmcts::worker(int n)
+{
+	State *search_state = new State(state);
+
+	for (int i = 0; i < n; i++){
+		search(search_state);
+		search_state->clear(state);
+	}
+
+	delete search_state;
+}
+
+void
+Cmcts::search(State *state)
 {
 	Node* current = root_node;
 	std::stack<Node*> nodes;
+	std::stack<int>   actions;
 	float value = 0.;
 	int action;
 
@@ -165,23 +170,25 @@ Cmcts::search(void)
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
 	   0 ak hra pokracuje
 	   */
-	int cnt = 0;
 	while (1){
-		cnt++;
 		if (current->nodeN == -1){
 			/* node expansion */
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			if (predict != nullptr){
+				py::gil_scoped_release release;
 				prediction_t = predict(get_board(), data);
+				py::gil_scoped_acquire acquire;
 				value = -prediction_t[0].cast<float>();
 				current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			}else{
 				value = -rollout();
-				current->set_prior(hboard, dir_noise);
+				current->set_prior(state, dir_noise);
 			}
 #else
+			py::gil_scoped_release release;
 			prediction_t = predict(get_board(), data);
+			py::gil_scoped_acquire acquire;
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			break;
@@ -189,74 +196,39 @@ Cmcts::search(void)
 		}
 
 		/* select new node, if it's leaf then expand */
-		action = current->select(board, cpuct);
-		board_move(action);
-		/* test if it is end state */
-		if (get_winner() != -1){
+		/* select is also updating node */
+		action = current->select(state, cpuct);
+		state->make_move(action);
+		nodes.push(current);
+		actions.push(action);
+
+		/* returns nullptr if reaches final state */
+		if (state->winner != -1){
 			/* if game is over don't push leaf node */
 			/* so what went wrong?? game is over in the next move,
 			   therefor I have to push this node to get updates which is the winning move
 			   but I don't have to create new node with end state */
 			/* player on move is the one who lost */
 			/* last node on stack is previous and that one also lost */
-			nodes.push(current);
-			if (get_winner() == 0 || get_winner() == 1)
+			if (state->winner == 0 || state->winner == 1)
 				value = 1.;
 			else
-				value = get_winner();
+				value = 0.;
 			break;
 		}
-
-		/* this is not a leaf node nor final node, push it */
-		nodes.push(current);
 		current = current->next_node(action);
 	}
-	cnt = 0;
 
 	/* backpropagate value */
 	while (!nodes.empty()){
 		current = nodes.top();
-		cnt++;
+		action  = actions.top();
 		nodes.pop();
+		actions.pop();
 
-		current->backpropagate(value);
+		current->backpropagate(action, value);
 		value = -value;
 	}
-
-	return;
-}
-
-
-void
-Cmcts::board_move(int action)
-{
-	int end = 0;
-	if (action >= SIZE || action < 0)
-		throw std::runtime_error("Invalid move "+std::to_string(action)+" out of bound (range is 0-"+std::to_string(SHAPE)+")!");
-	if (board[action] == 1 or board[SIZE+action] == 1){
-		std::cout<<"Invalid move y: "+std::to_string(board[action])+", x: "+std::to_string(board[SIZE+action])+"!\n";
-		throw std::runtime_error("Invalid move y: "+std::to_string(action/SHAPE)+", x: "+std::to_string(action%SHAPE)+"!");
-	}
-
-	board[player*SIZE + action] = 1;
-	player = player ? 0 : 1;
-	move_cnt += 1;
-
-	end = is_end();
-
-	if (end != 0.){
-		if (end == -1.)
-			winner = player == 0 ? 1. : 0.;
-		else if (end == 1.)
-			winner = player == 1 ? 1. : 0.;
-		else
-			/* draw */
-			winner = 0.5;
-	}
-
-#ifdef HEUR
-	update(action);
-#endif
 
 	return;
 }
@@ -266,7 +238,7 @@ Cmcts::make_move(int action)
 {
 	Node *old_node = root_node;
 
-	board_move(action);
+	state->make_move(action);
 	root_node = root_node->make_move(action);
 
 	delete old_node;
@@ -281,7 +253,7 @@ Cmcts::make_move(int y, int x)
 	int action = y*SHAPE + x;
 	Node *old_node = root_node;
 
-	board_move(action);
+	state->make_move(action);
 	root_node = root_node->make_move(action);
 
 	delete old_node;
@@ -291,9 +263,9 @@ Cmcts::make_move(int y, int x)
 py::array_t<float>
 Cmcts::get_board()
 {
-	auto b = new std::vector<float>(board.begin(),board.end());
+	auto b = new std::vector<float>(state->board.begin(),state->board.end());
 
-	if (player == 1)
+	if (state->player == 1)
 		std::swap_ranges(b->begin(), b->begin()+SIZE, b->begin() + SIZE);
 
 	auto capsule = py::capsule(b, [](void *b) { delete reinterpret_cast<std::vector<float>*>(b);});
@@ -304,7 +276,7 @@ Cmcts::get_board()
 py::array_t<float>
 Cmcts::get_heur()
 {
-	auto h = new std::vector<float>(hboard.begin(),hboard.end());
+	auto h = new std::vector<float>(state->hboard.begin(),state->hboard.end());
 
 	auto capsule = py::capsule(h, [](void *h) { delete reinterpret_cast<std::vector<float>*>(h);});
 
@@ -328,460 +300,45 @@ Cmcts::get_prob()
 	return py::array_t<float>(v->size(), v->data(), capsule);
 }
 
-float
-Cmcts::is_end()
-{
-	int v0 = 0, h0 = 0, lr0 = 0, rl0 = 0,
-	    v1 = 0, h1 = 0, lr1 = 0, rl1 = 0;
-
-	if (move_cnt < 9)
-		return 0.;
-
-	/* checking vertical and horizontal row of 5 */
-	for (int j = 0; j < SHAPE; j++){
-		// sum of first five horizontal elements for paler 1
-		// I hope that compiler will rollout this loop
-		h0 = h1 = v0 = v1 = 0;
-		for (int i = 0; i < 5; i++){
-			h0 += board[j*SHAPE+i];
-			h1 += board[j*SHAPE+i+SIZE];
-			v0 += board[i*SHAPE+j];
-			v1 += board[i*SHAPE+j+SIZE];
-		}
-		if (h0 == 5 || v0 == 5){
-			return player == 0 ? 1. : -1.;
-		}
-		if (h1 == 5 || v1 == 5){
-			return player == 1 ? 1. : -1.;
-		}
-
-		/* subtracting first element and addig one after last so the sum won't be recomputed */
-		for (int i = 0; i < SHAPE - 5; i++){
-			h0 = h0 - board[j*SHAPE+i]      + board[j*SHAPE+i+5];
-			h1 = h1 - board[j*SHAPE+i+SIZE] + board[j*SHAPE+i+5+SIZE];
-			v0 = v0 - board[i*SHAPE+j]      + board[(i+5)*SHAPE+j];
-			v1 = v1 - board[i*SHAPE+j+SIZE] + board[(i+5)*SHAPE+j+SIZE];
-
-			if (h0 == 5 || v0 == 5){
-				return player == 0 ? 1. : -1.;
-			}
-			if (h1 == 5 || v1 == 5){
-				return player == 1 ? 1. : -1.;
-			}
-		}
-	}
-
-	/* checking diagonals */
-	/* winning length can fit into SHAPE - (WIN_LEN-1) diagonals */
-	for (int j = 0; j < SHAPE - 4; j++){
-		/*
-		   starting from main diagonal moving in x direction
-		   lr - left to right diagonal
-		   rl - right to left diagonal
-		   sum of first elements in diagonal taken from j-th index
-		   the same is done for flipped board
-		*/
-		lr0 = lr1 = rl0 = rl1 = 0;
-		for (int i = 0; i < 5; i++){
-			lr0 += board[i*SHAPE+i+j];
-			lr1 += board[i*SHAPE+i+j+SIZE];
-			rl0 += board[i*SHAPE+SHAPE-1-i-j];
-			rl1 += board[i*SHAPE+SHAPE-1-i-j+SIZE];
-		}
-		if (lr0 == 5 || rl0 == 5){
-			return player == 0 ? 1. : -1.;
-		}
-		if (lr1 == 5 || rl1 == 5){
-			return player == 1 ? 1. : -1.;
-		}
-
-		for (int i = 0; i < SHAPE - 5 - j; i++){
-			lr0 = lr0 - board[i*SHAPE+i+j]      + board[(i+5)*SHAPE+i+j+5];
-			lr1 = lr1 - board[i*SHAPE+i+j+SIZE] + board[(i+5)*SHAPE+i+j+5+SIZE];
-			rl0 = rl0 - board[i*SHAPE+SHAPE-1-i-j]      + board[(i+5)*SHAPE+SHAPE-1-i-j-5];
-			rl1 = rl1 - board[i*SHAPE+SHAPE-1-i-j+SIZE] + board[(i+5)*SHAPE+SHAPE-1-i-j-5+SIZE];
-
-			if (lr0 == 5 || rl0 == 5){
-				return player == 0 ? 1. : -1.;
-			}
-			if (lr1 == 5 || rl1 == 5){
-				return player == 1 ? 1. : -1.;
-			}
-		}
-		if (j == 0)
-			continue;
-
-		/*
-		   the same as above but moving in y direction
-		   starts from one to exclude main diagonal which was computed above
-		*/
-		lr0 = lr1 = rl0 = rl1 = 0;
-		for (int i = 0; i < 5; i++){
-			lr0 += board[(i+j)*SHAPE+i];
-			lr1 += board[(i+j)*SHAPE+i+SIZE];
-			rl0 += board[(SHAPE-1-i-j)*SHAPE+i];
-			rl1 += board[(SHAPE-1-i-j)*SHAPE+i+SIZE];
-		}
-
-		if (lr0 == 5 || rl0 == 5){
-			return player == 0 ? 1. : -1.;
-		}
-		if (lr1 == 5 || rl1 == 5){
-			return player == 1 ? 1. : -1.;
-		}
-
-		for (int i = 0; i < SHAPE - 5 - j; i++){
-			lr0 = lr0 - board[(i+j)*SHAPE+i]      + board[(i+j+5)*SHAPE+i+5];
-			lr1 = lr1 - board[(i+j)*SHAPE+i+SIZE] + board[(i+j+5)*SHAPE+i+5+SIZE];
-			rl0 = rl0 - board[(SHAPE-1-i-j)*SHAPE+i]      + board[(SHAPE-1-i-j-5)*SHAPE+i+5];
-			rl1 = rl1 - board[(SHAPE-1-i-j)*SHAPE+i+SIZE] + board[(SHAPE-1-i-j-5)*SHAPE+i+5+SIZE];
-
-			if (lr0 == 5 || rl0 == 5){
-				return player == 0 ? 1. : -1.;
-			}
-			if (lr1 == 5 || rl1 == 5){
-				return player == 1 ? 1. : -1.;
-			}
-		}
-	}
-
-	if (move_cnt == SIZE)
-		return 1e-8;
-	return 0.;
-}
-
 #ifdef HEUR
 float
 Cmcts::rollout()
 {
-	int action = 0;
-	float v = 0;
-	double max = 0;
-	double h = 0;
-	/* save original state */
-	std::array<double,2*SIZE> start_hboard = hboard;
-	Board start_board  = board;
-	int   start_player = player;
-	int   start_cnt    = move_cnt;
-	float start_winner = winner;
+	float value = 0;
+	State *rollout_state = new State(state);
 
-	while (get_winner() == -1){
+	while (rollout_state->winner == -1){
 		/* choose action */
-		for (int a = 0; a < SIZE; a++){
-			if (board[a] == 0 and board[SIZE+a] == 0){
-				h = hboard[a]+hboard[SIZE+a];
-				if (max < h){
-					max = h;
-					action = a;
-				}
-			}
-		}
-		if (max == -1){
-			break;
-		}
-		max = -1;
-
-		board_move(action);
+		rollout_state->rollout_move();
 	}
 
-	if (get_winner() == 1. || get_winner() == 0.)
-		v = start_player == get_winner() ? 1. : -1.;
+	if (rollout_state->winner == 1. || rollout_state->winner == 0.)
+		value = state->player == rollout_state->winner ? 1. : -1.;
 
-	/* restore original state */
-	hboard   = start_hboard;
-	board    = start_board;
-	winner   = start_winner;
-	move_cnt = start_cnt;
-	player   = start_player;
-	return v;
-}
-
-void
-Cmcts::update(int action)
-{
-	int l = 0, r = 0;
-	int lbound = 0, rbound = 0;
-	int x = 0, y = 0, tmp = 0;
-	int op = this->player == 1 ? SIZE : 0;
-	int player = this->player == 1 ? 0 : SIZE;
-	int step = 0;
-	int reward = 0;
-
-	y = action/SHAPE;
-	x = action%SHAPE;
-	hboard[SIZE+action] = 0;
-	hboard[action] = 0;
-
-	//std::cout << "action: " <<action << std::endl;
-	// horizontal -
-	l = action-1;
-	r = action+1;
-	lbound = l;
-	rbound = r;
-	step = 1;
-
-	tmp = y*SHAPE-1;
-	while (tmp < lbound && !board[op+lbound]) lbound -= step;
-	tmp = (y+1)*SHAPE;
-	while (tmp > rbound && !board[op+rbound]) rbound += step;
-
-	while (lbound < l && board[player+l]) l -= step;
-	while (rbound > r && board[player+r]) r += step;
-
-	reward = r-l-1;
-	if (reward == 4)
-		reward *= 2;
-	for (int i = 4; i >= 0; i--){
-		if (lbound >= l)
-			break;
-		//std::cout << i <<"-l: " << l;
-		if (rbound-lbound > 5){
-			//hboard.at(player+l) += std::pow(reward,i);
-			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(4, reward);
-		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action-l-1,3);
-//			//std::cout << " -" << std::pow(4, action-l-1);
-//		}
-		l -= step;
-		//std::cout << std::endl;
-	}
-	for (int i = 4; i >= 0; i--){
-		if (rbound <= r)
-			break;
-		//std::cout << i <<"-r: " << r ;
-		if (rbound-lbound > 5){
-			//hboard.at(player+r) += std::pow(reward,i);
-			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(4, reward);
-		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r-action-1,3);
-//			//std::cout << " -" << std::pow(4, action-l-1);
-//		}
-		r += step;
-		//std::cout << std::endl;
-	}
-
-
-	// vertical |
-	l = action-SHAPE;
-	r = action+SHAPE;
-	lbound = l;
-	rbound = r;
-	step = SHAPE;
-
-	tmp = x-SHAPE;
-	while (tmp < lbound && !board[op+lbound]) lbound -= step;
-	tmp = x+SIZE;
-	while (tmp > rbound && !board[op+rbound]) rbound += step;
-
-	while (lbound < l && board[player+l]) l -= step;
-	while (rbound > r && board[player+r]) r += step;
-
-	reward = (r-l)/step-1;
-	if (reward == 4)
-		reward *= 2;
-	for (int i = 4; i >= 0; i--){
-		if (lbound >= l)
-			break;
-		//std::cout << i <<"|l: " << l;
-		if (rbound-lbound > 5*SHAPE){
-			//hboard.at(player+l) += std::pow(reward,i);
-			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		l -= step;
-		//std::cout << std::endl;
-	}
-	for (int i = 4; i >= 0; i--){
-		if (rbound <= r)
-			break;
-		//std::cout << i <<"|r: " << r ;
-		if (rbound-lbound > 5*SHAPE){
-			//hboard.at(player+r) += std::pow(reward,i);
-			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		//std::cout << std::endl;
-		r += step;
-	}
-
-	/* lr diagonal \ */
-	l = action-SHAPE-1;
-	r = action+SHAPE+1;
-	lbound = l;
-	rbound = r;
-	step = SHAPE+1;
-
-	tmp = x-y >= 0 ? x-y-step : -1 + (y-x-1)*SHAPE;
-	while (tmp < lbound && !board[op+lbound]) lbound -= step;
-	tmp = x > y ? action+(SHAPE-x)*step : action+(SHAPE-y)*step;
-	tmp = x-y >= 0 ? step*SHAPE -SHAPE*(x-y) : step*SHAPE + x - y;
-	while (tmp > rbound && !board[op+rbound]) rbound += step;
-
-	while (lbound < l && board[player+l]) l -= step;
-	while (rbound > r && board[player+r]) r += step;
-
-	reward = (r-l)/step-1;
-	if (reward == 4)
-		reward *= 2;
-	//std::cout << "r: "<<r<<" l: "<<l<<std::endl;
-	//std::cout << "rb: "<<rbound<<" lb: "<<lbound<<std::endl;
-	for (int i = 4; i >= 0; i--){
-		if (lbound >= l)
-			break;
-		//std::cout << i <<"\\l: " << l ;
-		if ((rbound-lbound)/step > 5){
-			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-			//hboard.at(player+l) += std::pow(reward,i);
-		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1,3);
-//		}
-		//std::cout << std::endl;
-		l -= step;
-	}
-	for (int i = 4; i >= 0; i--){
-		if (rbound <= r)
-			break;
-		//std::cout << i <<"\\r: " << r ;
-		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+r) += std::pow(reward,i);
-			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		r += step;
-		//std::cout << std::endl;
-	}
-
-	/* lr diagonal / */
-	l = action-SHAPE+1;
-	r = action+SHAPE-1;
-	lbound = l;
-	rbound = r;
-	step = SHAPE-1;
-
-	tmp = x+y < SHAPE-1 ? x+y-step : (y+x-step)*SHAPE;
-	//std::cout << "tmp: "<<tmp<<std::endl;
-	while (tmp < lbound && !board[op+lbound]) lbound -= step;
-	tmp = x+y < SHAPE-1 ? (x+y)*SHAPE+step : step*SHAPE + x + y;
-	//std::cout << "tmp: "<<tmp<<std::endl;
-	while (tmp > rbound && !board[op+rbound]) rbound += step;
-
-	while (lbound < l && board[player+l]) l -= step;
-	while (rbound > r && board[player+r]) r += step;
-
-	reward = (r-l)/step-1;
-	if (reward == 4)
-		reward *= 2;
-	//std::cout << "r: "<<r<<" l: "<<l<<std::endl;
-	//std::cout << "rb: "<<rbound<<" lb: "<<lbound<<std::endl;
-	for (int i = 4; i >= 0; i--){
-		if (lbound >= l)
-			break;
-		//std::cout << i <<"/l: " << l ;
-		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+l) += std::pow(reward,i);
-			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		l -= step;
-		//std::cout << std::endl;
-	}
-	for (int i = 4; i >= 0; i--){
-		if (rbound <= r)
-			break;
-		//std::cout << i <<"/r: " << r ;
-		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+r) += std::pow(reward,i);
-			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
-		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		r += step;
-		//std::cout << std::endl;
-	}
-
-	return;
+	delete rollout_state;
+	return value;
 }
 
 void
 Cmcts::print_heur()
 {
-	for (int i = 0; i < SHAPE; i++){
-		for (int j = 0; j < SHAPE; j++){
-			if (hboard[SIZE+i*SHAPE+j]+hboard[i*SHAPE+j] == 1)
-				std::cout << "_ ";
-			else
-				std::cout << hboard[SIZE+i*SHAPE+j]+hboard[i*SHAPE+j] << " ";
-		}
-		std::cout << std::endl;
-	}
+	state->print_heur();
 	return;
 }
-
 #endif
 
 std::string
 Cmcts::repr()
 {
 	std::string s;
-	s.append("First player: x\n");
-	if (player == 0)
-		s.append("Player: x\n");
-	else
-		s.append("Player: o\n");
-	if (get_winner() == 0)
-		s.append("Winner: x\n");
-	else if (get_winner() == 1)
-		s.append("Winner: o\n");
-	else if (get_winner() == -1)
-		s.append("Winner: _\n");
-	else
-		s.append("Winner: draw\n");
-
 	s.append("Alpha: "+std::to_string(alpha[0])+"\n");
+	s.append("CPUCT: "+std::to_string(cpuct)+"\n");
 	if (predict == nullptr)
 		s.append("Heuristic: yes\n");
 	else
 		s.append("Heuristic: no\n");
 
-	s.append("Move count: "+std::to_string(move_cnt)+"\n");
-	s.append("Board size: "+std::to_string(SIZE)+"\n");
-	s.append("Board:\n");
-	for (int i=0; i<SHAPE; i++){
-		for (int j=0; j<SHAPE; j++)
-			if (board[i*SHAPE+j] == 1)
-				s.append("x ");
-			else if (board[i*SHAPE+j+SIZE] == 1)
-				s.append("o ");
-			else
-				s.append("_ ");
-		s.append("\n");
-	}
+	s.append(state->repr());
 
 	return s;
 }
@@ -814,6 +371,6 @@ Cmcts::print_u(std::vector<int> &v)
 		n = n->next_node(i);
 		std::cout << i << std::endl;
 	}
-	py::print(n->print_u(board, cpuct));
+	py::print(n->print_u(state, cpuct));
 	return;
 }

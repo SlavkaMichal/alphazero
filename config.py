@@ -2,7 +2,7 @@ import sys
 import os
 
 # number of simulations performed by MCTS
-SIMS = 100
+SIMS = 3000
 
 # how many training examples should be generated
 # optimally tens of thousands
@@ -36,7 +36,7 @@ CMCTS_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_i
 
 # version
 MAJOR = 0
-MINOR = 1
+MINOR = 2
 # dimensions of board
 SHAPE = 13
 

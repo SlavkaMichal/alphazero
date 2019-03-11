@@ -5,28 +5,28 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
-#include <array>
 #include <iomanip>
 #include <sstream>
 #include <cmath>
 #include <math.h>
 #include <string>
 #include <memory>
+#include <mutex>
+#include "state.h"
 
 namespace py = pybind11;
-using Board = std::array<int, SIZE*2>;
 
 struct Node{
 public:
-	int select(Board &board, double cpuct);
+	int select(State *state, double cpuct);
 	struct Node* next_node(int action);
 	struct Node* make_move(int action);
-	void backpropagate(float value);
+	void backpropagate(int action, float value);
 	void set_prior(py::array_t<float> p, double* dir);
-	void set_prior(std::array<double, 2*SIZE> &hboard, double* dir);
+	void set_prior(State *state, double* dir);
 	std::array<int, SIZE>* counts();
 	std::string repr();
-	std::string print_u(Board &board, double cpuct);
+	std::string print_u(State *state, double cpuct);
 	bool is_null(int a);
 	int nodeN;
 //	std::string name;
@@ -35,12 +35,12 @@ public:
 	Node();
 	~Node();
 private:
+	std::mutex mutex;
 	std::array<std::unique_ptr<Node>, SIZE> child;
-	int last_action;
 	int child_cnt;
-	std::array<int, SIZE> edgeN;
-	std::array<float, SIZE> edgeP;
-	std::array<float, SIZE> edgeW;
+	std::array<int, SIZE>   childN;
+	std::array<float, SIZE> childP;
+	std::array<float, SIZE> childW;
 };
 
 #endif

@@ -1,14 +1,14 @@
 #!/usr/bin/python
 import sys
 sys.path.append('..')
-from config import SHAPE, SIZE, SIMS, CMCTS_PATH
 import site
-site.addsitedir(CMCTS_PATH)
-
+from config import *
+site.addsitedir(CMCTS_SITE_PATH)
+import numpy as np
+import cmcts
 import argparse
 import server as cmds
 from server import Server
-import cmcts
 
 HOST = '127.0.0.1'
 PORT = 27015
@@ -42,13 +42,15 @@ def main():
                 sys.stdout.flush()
                 mcts.make_move(x = move[0], y = move[1])
             elif cmd == cmds.MAKE_MOVE:
-                print("My move")
+                print("My move sims {}".format(SIMS))
                 sys.stdout.flush()
                 mcts.simulate(SIMS)
+                print("get")
                 pi = mcts.get_prob()
                 mcts.print_node([])
                 move = np.argmax(pi)
                 mcts.make_move(move)
+                print("made move")
                 server.make_move((move%SHAPE,move//SHAPE))
             elif cmd == cmds.LOAD_MOVE:
                 print("Loading move")
@@ -62,7 +64,7 @@ def main():
                 sys.stdout.flush()
                 print(move)
                 #assert move == SHAPE
-                mcts = cmcts.mcts()
+                mcts.clear()
             elif cmd == cmds.END:
                 print("End")
                 sys.stdout.flush()

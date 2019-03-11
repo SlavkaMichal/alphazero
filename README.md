@@ -9,8 +9,18 @@
 	* namiesto nulovania heuristickej dosky len odcitat odmenu
 * logging
 * multiprocessing/ virtual loss
-* ulozit metadata o generaciach a iteraciach
+	* ako by to malo fungovat:
+	* vlakno pri prechode si zoberie lock od uzlu incrementuje vitual loss
+ktora sa potom odcita od W a teda pre dalsie vlakno to bude ako keby toto
+vlakno raz prehralo
+	* pri bakpropagaci ziska opat lock, updatne W N a dekrementuje virtual
+loss
+	* ako to bude fungovat s evaluaciou?
+* multithreaded evaulation
+
 * script co nacita ulozene data odstrani duplikaty a prida rotacie
+* cache:
+	* pred evaluac
 
 ## TRAINING PIPELINE:
 * Self-play:

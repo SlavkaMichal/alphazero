@@ -18,14 +18,17 @@ if DEBUG:
     extra_compile_args.append('-DDBG')
 
 cmcts = Extension('cmcts',
-        ['module.cpp','cmcts.cpp','node.cpp'],
+        ['module.cpp','cmcts.cpp','node.cpp', 'state.cpp'],
         include_dirs = [get_include(), get_include(True)],
         language = 'c++',
         extra_compile_args = extra_compile_args,
-        extra_link_args = ['-lgsl', '-lgslcblas', '-lm'],
+        extra_link_args = ['-lgsl', '-lgslcblas', '-lm', '-pthread'],
         define_macros=[
             ('SIZE', SIZE),
             ('SHAPE', SHAPE),
+            ('THREADS', 8),
+            ('MAJOR', MAJOR),
+            ('MINOR', MINOR),
             ]
         )
 

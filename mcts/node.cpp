@@ -1,17 +1,14 @@
 #include "node.h"
-#include <cmath>
-#include <math.h>
 
 Node::
 //Node(std::string &name, int a) :
 Node() :
 	nodeN(-1),
 	child{},
-	last_action(-1),
 	child_cnt(0),
-	edgeN(),
-	edgeP(),
-	edgeW()
+	childN(),
+	childP(),
+	childW()
 {
 //	if (a == -1)
 //		this->name = name;
@@ -31,56 +28,65 @@ set_prior(py::array_t<float> p, double *dir)
 {
 	auto buff = p.request();
 	float *ptr = (float *)buff.ptr;
+	mutex.lock();
+	if (nodeN != -1)
+		return;
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
 	for (int i = 0; i < SIZE; i++){
 		// dir sum to 1 also p should
-		edgeP[i] = 0.75*ptr[i]+0.25*dir[i];
+		childP[i] = 0.75*ptr[i]+0.25*dir[i];
 	}
 
 	nodeN = 0;
+	mutex.unlock();
 	return;
 }
 
 void Node::
-set_prior(std::array<double, 2*SIZE> &hboard, double* dir)
+set_prior(State *state, double* dir)
 {
 	float sum = 0.;
+	mutex.lock();
+
+	// check if node wasn't already explored
+	if (nodeN != -1)
+		return;
+
 	for (int i = 0; i < SIZE; i++){
-		edgeP[i] = hboard[SIZE+i]+hboard[SIZE+i];
-		sum += edgeP[i];
+		childP[i] = state->hboard[SIZE+i]+state->hboard[SIZE+i];
+		sum += childP[i];
 	}
 	for (int i = 0; i < SIZE; i++){
-		edgeP[i] = edgeP[i]/sum*0.9+dir[i]*0.1;
+		childP[i] = childP[i]/sum*0.9+dir[i]*0.1;
 	}
 
 	nodeN = 0;
+	mutex.unlock();
 	return;
 }
 
 void Node::
-backpropagate(float value)
+backpropagate(int action, float value)
 {
-	if (last_action == -1)
-		throw std::runtime_error("No action chosen from this node");
-	edgeN[last_action] += 1;
-	edgeW[last_action] += value;
-	nodeN += 1;
-
-	/* to ensure that a node won't be backpropageted twice with the same action */
-	last_action = -1;
+	std::lock_guard<std::mutex> guard(mutex);
+	/* restore virtual loss */
+	childW[action] += 1;
+	childW[action] += value;
 
 	return;
 }
 
 int Node::
-select(Board &board, double cpuct)
+select(State *state, double cpuct)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
 	int best_a = -1;
 	double u;
 	double best_u = -INFINITY;
+
+	mutex.lock();
 	for (int a = 0; a < SIZE; a++){
 		/* TODO
 		   uplne mi to nesedi
@@ -89,23 +95,28 @@ select(Board &board, double cpuct)
 		*/
 		/* skip non_valid moves */
 		// TODO napisat ci pre toto test
-		if (board[a] != 0 or board[SIZE+a] != 0)
+		if (!state->is_valid(a))
 			continue;
-		if (edgeN[a] != 0)
-			u = edgeW[a]/edgeN[a] + cpuct*edgeP[a]*std::sqrt(nodeN + 1e-8) / (edgeN[a] + 1);
+		if (childN[a] != 0)
+			u = childW[a]/childN[a] + cpuct*childP[a]*std::sqrt(nodeN + 1e-8) / (childN[a] + 1);
 		else
-			u = cpuct*edgeP[a]*std::sqrt(nodeN + 1e-8);
+			u = cpuct*childP[a]*std::sqrt(nodeN + 1e-8);
 
 		if (u > best_u){
 			best_u = u;
 			best_a = a;
 		}
 	}
+	childN[best_a] += 1;
+	nodeN += 1;
+	//childLoss[best_a] += 1;
+	// subtract virtual loss
+	childW[best_a] -= 1;
+	mutex.unlock();
 
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
 
-	last_action = best_a;
 	return best_a;
 }
 
@@ -117,7 +128,6 @@ next_node(int action)
 		//child[action] = std::unique_ptr<Node>(new Node(name,action));
 		child_cnt += 1;
 	}
-
 	return child[action].get();
 }
 
@@ -149,7 +159,7 @@ make_move(int action)
 std::array<int, SIZE>* Node::
 counts()
 {
-	return &edgeN;
+	return &childN;
 }
 
 std::string Node::
@@ -162,15 +172,14 @@ repr()
 
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
 	s.append("Child count: "+std::to_string(child_cnt)+"\n");
-	s.append("Last action: "+std::to_string(last_action)+"\n");
 	//s.append("Name: "+name+"\n");
 	s.append("\nCounts:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			ss << std::setw(3) << std::setfill(' ') << edgeN[i*SHAPE+j];
+			ss << std::setw(3) << std::setfill(' ') << childN[i*SHAPE+j];
 			s.append(ss.str()+" ");
 			ss.str(std::string());
-			sum += edgeN[i*SHAPE+j];
+			sum += childN[i*SHAPE+j];
 		}
 		s.append("\n");
 	}
@@ -180,33 +189,33 @@ repr()
 	s.append("\nProbs:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << edgeP[i*SHAPE+j];
+			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << childP[i*SHAPE+j];
 			s.append(ss.str()+" ");
 			ss.str(std::string());
-			sumf += edgeP[i*SHAPE+j];
+			sumf += childP[i*SHAPE+j];
 		}
 		s.append("\n");
 	}
 	s.append("\nProbs total: "+std::to_string(sumf)+"\n");
 
 	sumf = 0;
-	s.append("\nTotal edge values:\n");
+	s.append("\nTotal child values:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << edgeW[i*SHAPE+j];
+			ss << std::setw(3)<<std::setprecision(3) << std::setfill(' ') << childW[i*SHAPE+j];
 			s.append(ss.str()+" ");
 			ss.str(std::string());
-			sumf += edgeW[i*SHAPE+j];
+			sumf += childW[i*SHAPE+j];
 		}
 		s.append("\n");
 	}
-	s.append("\nSum of total edge values: "+std::to_string(sumf)+"\n");
+	s.append("\nSum of total child values: "+std::to_string(sumf)+"\n");
 
 	return s;
 }
 
 std::string Node::
-print_u(Board &board, double cpuct)
+print_u(State *state, double cpuct)
 {
 	std::string s;
 	std::stringstream ss;
@@ -216,17 +225,17 @@ print_u(Board &board, double cpuct)
 	double u;
 	double best_u = -INFINITY;
 	//s.append("Name: "+name+"\n");
-	s.append("\nTotal edge values:\n");
+	s.append("\nTotal child values:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
-			if (board[i*SHAPE+j] == 1 or board[i*SHAPE+j+SIZE] == 1){
+			if (!state->is_valid(i*SHAPE+j)){
 				s.append(" ___ ");
 				continue;
 			}
-			if (edgeN[i*SHAPE+j] != 0)
-				u = edgeW[i*SHAPE+j]/edgeN[i*SHAPE+j] + cpuct*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8) / (edgeN[i*SHAPE+j] + 1);
+			if (childN[i*SHAPE+j] != 0)
+				u = childW[i*SHAPE+j]/childN[i*SHAPE+j] + cpuct*childP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8) / (childN[i*SHAPE+j] + 1);
 			else
-				u = cpuct*edgeP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8);
+				u = cpuct*childP[i*SHAPE+j]*std::sqrt(nodeN + 1e-8);
 
 			if (u > best_u){
 				best_u = u;
@@ -242,17 +251,6 @@ print_u(Board &board, double cpuct)
 
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
-	s.append("Board:\n");
-	for (int i=0; i<SHAPE; i++){
-		for (int j=0; j<SHAPE; j++)
-			if (board[i*SHAPE+j] == 1)
-				s.append("x ");
-			else if (board[i*SHAPE+j+SIZE] == 1)
-				s.append("o ");
-			else
-				s.append("_ ");
-		s.append("\n");
-	}
 
 	return s;
 }
