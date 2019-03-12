@@ -3,4 +3,7 @@ init.py
 mcts/build
 mcts/cmcts.egg-info
 mcts/dist
+model
+data
+tests
 

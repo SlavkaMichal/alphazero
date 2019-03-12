@@ -26,9 +26,11 @@ Node::
 void Node::
 set_prior(py::array_t<float> p, double *dir)
 {
+#ifdef THREADS
+	std::lock_guard<std::mutex> guard(mutex);
+#endif
 	auto buff = p.request();
 	float *ptr = (float *)buff.ptr;
-	mutex.lock();
 	if (nodeN != -1)
 		return;
 	// copy result
@@ -39,16 +41,16 @@ set_prior(py::array_t<float> p, double *dir)
 	}
 
 	nodeN = 0;
-	mutex.unlock();
 	return;
 }
 
 void Node::
 set_prior(State *state, double* dir)
 {
+#ifdef THREADS
+	std::lock_guard<std::mutex> guard(mutex);
+#endif
 	float sum = 0.;
-	mutex.lock();
-
 	// check if node wasn't already explored
 	if (nodeN != -1)
 		return;
@@ -62,16 +64,17 @@ set_prior(State *state, double* dir)
 	}
 
 	nodeN = 0;
-	mutex.unlock();
 	return;
 }
 
 void Node::
 backpropagate(int action, float value)
 {
+#ifdef THREADS
 	std::lock_guard<std::mutex> guard(mutex);
 	/* restore virtual loss */
 	childW[action] += 1;
+#endif
 	childW[action] += value;
 
 	return;
@@ -86,7 +89,9 @@ select(State *state, double cpuct)
 	double u;
 	double best_u = -INFINITY;
 
+#ifdef THREADS
 	mutex.lock();
+#endif
 	for (int a = 0; a < SIZE; a++){
 		/* TODO
 		   uplne mi to nesedi
@@ -109,10 +114,11 @@ select(State *state, double cpuct)
 	}
 	childN[best_a] += 1;
 	nodeN += 1;
-	//childLoss[best_a] += 1;
+#ifdef THREADS
 	// subtract virtual loss
 	childW[best_a] -= 1;
 	mutex.unlock();
+#endif
 
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
@@ -126,7 +132,6 @@ next_node(int action)
 	if (child[action]==nullptr){
 		child[action] = std::unique_ptr<Node>(new Node());
 		//child[action] = std::unique_ptr<Node>(new Node(name,action));
-		child_cnt += 1;
 	}
 	return child[action].get();
 }
@@ -150,7 +155,6 @@ make_move(int action)
 	if (ret == nullptr){
 		//ret = new Node(name, action);
 		ret = new Node();
-		child_cnt += 1;
 	}
 
 	return ret;
@@ -171,7 +175,7 @@ repr()
 	std::stringstream ss;
 
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
-	s.append("Child count: "+std::to_string(child_cnt)+"\n");
+	//s.append("Child count: "+std::to_string(child_cnt)+"\n");
 	//s.append("Name: "+name+"\n");
 	s.append("\nCounts:\n");
 	for (int i=0; i<SHAPE; i++){
