@@ -6,6 +6,7 @@
 #include <cmath>
 #include <time.h>
 #include <math.h>
+#include <Python.h>
 #include "cmcts.h"
 
 namespace py = pybind11;
@@ -108,7 +109,6 @@ Cmcts::set_seed(unsigned long int seed)
 void
 Cmcts::simulate(int n)
 {
-	//int th_num = THREADS;
 	if (n < 1)
 		throw std::runtime_error("Invalid input "+std::to_string(n)+" must be at least 1!");
 #ifndef HEUR
@@ -118,27 +118,31 @@ Cmcts::simulate(int n)
 #endif
 
 	// divide workload
-	//if (n < th_num){
-	//	th_num = n;
-	//	n = 1;
-	//}
-	//else if (n % th_num == 0)
-	//	n = n/th_num;
-	//else
-	//	n = n/th_num + 1;
-
 	py::gil_scoped_release release;
-	//std::thread *threads = new std::thread[th_num];
+#ifdef THREADS
+	int th_num = THREADS;
+	if (n < th_num){
+		th_num = n;
+		n = 1;
+	}
+	else if (n % th_num == 0)
+		n = n/th_num;
+	else
+		n = n/th_num + 1;
 
-	//for (int i = 0; i < th_num; i++){
-	//	threads[i] = std::thread(&Cmcts::worker, this, n);
-	//}
-	//for (int i = 0; i< th_num; i++){
-	//	threads[i].join();
-	//}
+	std::thread *threads = new std::thread[th_num];
 
+	for (int i = 0; i < th_num; i++){
+		threads[i] = std::thread(&Cmcts::worker, this, n);
+	}
+	for (int i = 0; i< th_num; i++){
+		threads[i].join();
+	}
+
+	delete[] threads;
+#else
 	worker(n);
-	//delete[] threads;
+#endif
 	return;
 }
 
@@ -176,9 +180,8 @@ Cmcts::search(State *state)
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			if (predict != nullptr){
-				py::gil_scoped_release release;
-				prediction_t = predict(get_board(), data);
 				py::gil_scoped_acquire acquire;
+				prediction_t = predict(get_board(), data);
 				value = -prediction_t[0].cast<float>();
 				current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			}else{
@@ -186,9 +189,9 @@ Cmcts::search(State *state)
 				current->set_prior(state, dir_noise);
 			}
 #else
-			py::gil_scoped_release release;
-			prediction_t = predict(get_board(), data);
+			//std::cout<<"2gil: " <<PyGILState_Check()<< std::endl;
 			py::gil_scoped_acquire acquire;
+			prediction_t = predict(get_board(), data);
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			break;
