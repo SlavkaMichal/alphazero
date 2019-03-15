@@ -6,9 +6,16 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <algorithm>
 #include <math.h>
 #include <string>
 #include <memory>
+//#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/embed.h>
+#include <thread>
+
+namespace py = pybind11;
 
 using Board = std::array<int, SIZE*2>;
 
@@ -22,6 +29,7 @@ struct State{
 	void  clear();
 	void  clear(const State *obj);
 	void  make_move(int action);
+	py::array_t<float> get_board();
 	std::string repr();
 #ifdef HEUR
 	void print_heur();

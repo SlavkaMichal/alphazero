@@ -1,12 +1,3 @@
-#include <algorithm>
-#include <stack>
-#include <array>
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <time.h>
-#include <math.h>
-#include <Python.h>
 #include "cmcts.h"
 
 namespace py = pybind11;
@@ -139,7 +130,9 @@ Cmcts::simulate(int n)
 		threads[i].join();
 	}
 
+	std::cout<< "delete threads" <<std::endl;
 	delete[] threads;
+	std::cout<< "deleted threads" <<std::endl;
 #else
 	worker(n);
 #endif
@@ -149,14 +142,22 @@ Cmcts::simulate(int n)
 void
 Cmcts::worker(int n)
 {
+	std::cout<<std::this_thread::get_id()<< " started" <<std::endl;
+	std::cout<<std::this_thread::get_id()<< " has "<<n <<" jobs" <<std::endl;
 	State *search_state = new State(state);
 
 	for (int i = 0; i < n; i++){
+		std::cout<<std::this_thread::get_id()<< " job "<<i <<std::endl;
+		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
 		search(search_state);
+		std::cout<<std::this_thread::get_id()<< " search returned "<<i <<std::endl;
+		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
 		search_state->clear(state);
 	}
 
+	std::cout<<std::this_thread::get_id()<< " delete state" <<std::endl;
 	delete search_state;
+	std::cout<<std::this_thread::get_id()<< " deleted state" <<std::endl;
 }
 
 void
@@ -177,12 +178,18 @@ Cmcts::search(State *state)
 	while (1){
 		if (current->nodeN == -1){
 			/* node expansion */
+			std::cout<<std::this_thread::get_id()<< " initializing node" <<std::endl;
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
+			std::cout<<std::this_thread::get_id()<< " heur def" <<std::endl;
 			if (predict != nullptr){
+				std::cout<<std::this_thread::get_id()<< " not null" <<std::endl;
 				py::gil_scoped_acquire acquire;
-				prediction_t = predict(get_board(), data);
+				auto board =state->get_board();
+				prediction_t = predict(board, data);
+				std::cout<<std::this_thread::get_id()<< " cast" <<std::endl;
 				value = -prediction_t[0].cast<float>();
+				std::cout<<std::this_thread::get_id()<< " set" <<std::endl;
 				current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 			}else{
 				value = -rollout();
@@ -190,18 +197,23 @@ Cmcts::search(State *state)
 			}
 #else
 			//std::cout<<"2gil: " <<PyGILState_Check()<< std::endl;
+			std::cout<<std::this_thread::get_id()<< " else" <<std::endl;
 			py::gil_scoped_acquire acquire;
-			prediction_t = predict(get_board(), data);
+			prediction_t = predict(state->get_board(), data);
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
-			break;
 #endif
+			std::cout <<std::this_thread::get_id()<< " search new node explored" << std::endl;
+			break;
 		}
 
 		/* select new node, if it's leaf then expand */
 		/* select is also updating node */
+		std::cout<<std::this_thread::get_id()<< " select" <<std::endl;
 		action = current->select(state, cpuct);
+		std::cout<<std::this_thread::get_id()<< " make_move" <<std::endl;
 		state->make_move(action);
+		std::cout<<std::this_thread::get_id()<< " push"<< current <<std::endl;
 		nodes.push(current);
 		actions.push(action);
 
@@ -221,17 +233,21 @@ Cmcts::search(State *state)
 		}
 		current = current->next_node(action);
 	}
-
+	std::cout <<std::this_thread::get_id()<< " ready to backprop" << std::endl;
 	/* backpropagate value */
 	while (!nodes.empty()){
+		std::cout <<std::this_thread::get_id()<< " ready to backprop" << std::endl;
 		current = nodes.top();
+		std::cout<<std::this_thread::get_id()<< " pop"<< current <<std::endl;
 		action  = actions.top();
 		nodes.pop();
 		actions.pop();
 
+		std::cout<<std::this_thread::get_id()<< " backprop" <<std::endl;
 		current->backpropagate(action, value);
 		value = -value;
 	}
+	std::cout <<std::this_thread::get_id()<< " search return" << std::endl;
 
 	return;
 }
@@ -266,24 +282,21 @@ Cmcts::make_move(int y, int x)
 py::array_t<float>
 Cmcts::get_board()
 {
-	auto b = new std::vector<float>(state->board.begin(),state->board.end());
-
-	if (state->player == 1)
-		std::swap_ranges(b->begin(), b->begin()+SIZE, b->begin() + SIZE);
-
-	auto capsule = py::capsule(b, [](void *b) { delete reinterpret_cast<std::vector<float>*>(b);});
-
-	return py::array_t<float>(std::vector<ptrdiff_t>{2,SHAPE,SHAPE}, b->data(), capsule);
+	return state->get_board();
 }
 
 py::array_t<float>
 Cmcts::get_heur()
 {
-	auto h = new std::vector<float>(state->hboard.begin(),state->hboard.end());
-
-	auto capsule = py::capsule(h, [](void *h) { delete reinterpret_cast<std::vector<float>*>(h);});
-
-	return py::array_t<float>(std::vector<ptrdiff_t>{2,SHAPE,SHAPE}, h->data(), capsule);
+	auto b = py::array_t<float>(state->hboard.size());
+	py::buffer_info buff = b.request();
+	float *ptr = (float*)buff.ptr;
+	for (int i = 0; i < state->hboard.size(); i++)
+		ptr[i] = state->hboard[i];
+	return b;
+	//auto h = new std::vector<float>(state->hboard.begin(),state->hboard.end());
+	//auto capsule = py::capsule(h, [](void *h) { delete reinterpret_cast<std::vector<float>*>(h);});
+	//return py::array_t<float>(std::vector<ptrdiff_t>{2,SHAPE,SHAPE}, h->data(), capsule);
 }
 
 py::array_t<float>
@@ -294,13 +307,19 @@ Cmcts::get_prob()
 	 */
 	std::array<int, SIZE>* counts = root_node->counts();
 	int sum = root_node->nodeN;
-	auto v = new std::vector<float>(counts->begin(), counts->end());
+	//auto v = new std::vector<float>(counts->begin(), counts->end());
+	auto b = py::array_t<float>(counts->size());
+	py::buffer_info buff = b.request();
+	float *ptr = (float*)buff.ptr;
+	for (int i = 0; i < state->hboard.size(); i++)
+		ptr[i] = counts->at(i);
+	return b;
 
-	for (int i = 0; i < SIZE; i++)
-		v->at(i) = v->at(i) / sum;
-	auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<float>*>(v);});
+	//for (int i = 0; i < SIZE; i++)
+	//	v->at(i) = v->at(i) / sum;
+	//auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<float>*>(v);});
 
-	return py::array_t<float>(v->size(), v->data(), capsule);
+	//return py::array_t<float>(v->size(), v->data(), capsule);
 }
 
 #ifdef HEUR
