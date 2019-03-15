@@ -4,7 +4,7 @@ import torch
 import pdb
 import sys
 from os.path import dirname
-sys.path.append(dirname(sys.path[0]))
+sys.path.append('..')
 from config import SIZE, SHAPE
 
 class simplerNN(nn.Module):
@@ -22,10 +22,10 @@ class simplerNN(nn.Module):
         self.front = nn.Sequential(*layers)
 
         self.prob = nn.Sequential(
-                nn.Conv2d(input_channels, input_channels, kernel_size = 3, bias=True),
+                nn.Conv2d(input_channels, input_channels, kernel_size = 3, padding=1, bias=True),
                 nn.BatchNorm2d(input_channels),
                 nn.ReLU(),
-                nn.Conv2d(input_channels, input_channels, kernel_size = 3, bias=True),
+                nn.Conv2d(input_channels, input_channels, kernel_size = 3, padding=1, bias=True),
                 nn.BatchNorm2d(input_channels),
                 nn.ReLU(),
                 nn.Conv2d(input_channels, 2, kernel_size = 1),
@@ -33,7 +33,8 @@ class simplerNN(nn.Module):
                 nn.ReLU(),
                 nn.Conv2d(2, 1, kernel_size = 1),
                 nn.BatchNorm2d(1),
-                nn.ReLU())
+                nn.ReLU()
+                )
 
         self.softmax = nn.Softmax(dim=1)
 
