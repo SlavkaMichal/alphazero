@@ -13,7 +13,7 @@ int main()
 	Cmcts mcts = Cmcts(1, 0.5, init.attr("CPUCT").cast<double>());
 	py::object obj = init.attr("model_wraper");
 	py::object model = init.attr("model");
-	std::function<py::tuple(py::array_t<float>, py::object)> predictor = obj.cast<std::function<py::tuple(py::array_t<float>, py::object)>>();
+	std::function<py::tuple(py::array_t<float>, py::object)> predictor = obj;
 	mcts.set_predictor(predictor,model);
 	mcts.simulate(1);
 

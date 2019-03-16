@@ -110,7 +110,9 @@ Cmcts::simulate(int n)
 
 	// divide workload
 	py::gil_scoped_release release;
+	std::cout<<std::this_thread::get_id()<< " parent thread" <<std::endl;
 #ifdef THREADS
+	std::cout << "creating threads" << std::endl;
 	int th_num = THREADS;
 	if (n < th_num){
 		th_num = n;
@@ -134,6 +136,7 @@ Cmcts::simulate(int n)
 	delete[] threads;
 	std::cout<< "deleted threads" <<std::endl;
 #else
+	std::cout <<"not creating threads" << std::endl;
 	worker(n);
 #endif
 	return;

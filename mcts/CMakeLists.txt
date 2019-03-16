@@ -7,7 +7,7 @@ find_package(GSL REQUIRED)
 find_package(Threads REQUIRED)
 
 add_definitions(-DHEUR -DDBG)
-add_compile_definitions(SIZE=169 SHAPE=13 THREADS=8)
+add_compile_definitions(SIZE=169 SHAPE=13)
 SET(CMAKE_CXX_FLAGS "-g -fvisibility=hidden")
 
 
