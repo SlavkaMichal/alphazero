@@ -72,10 +72,16 @@ def self_play_iteration(model_class):
     traced_script_module.save("{}.pt".format(model_name))
     return
 
-    mcts0 = cmcts.mcts(seed=rand_uint32(), alpha=float(ALPHA), cpuct=float(CPUCT))
+    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts0.set_predictor("{}.pt".format(model_name))
-    mcts1 = cmcts.mcts(seed=rand_uint32(), alpha=ALPHA, cpuct=CPUCT)
+    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts1.set_predictor("{}.pt".format(model_name))
+    if 'ALPHA' in globals():
+        mcts0.set_alpha(ALPHA)
+        mcts1.set_alpha(ALPHA)
+    else:
+        mcts0.set_alpha()
+        mcts1.set_alpha()
 
     # dtype should be always dtype of input tensor
     data = []

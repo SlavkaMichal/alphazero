@@ -1,26 +1,41 @@
-## Notes:
-* ak to bude padat skusit Custom smart pointre
-* skoncil som na 7.8
+# AlphaZero gomoku
+
+## How to:
+### Dependencies:
+* pybind11:
+	1. `git clone https://github.com/pybind/pybind11.git`
+	* `source env.sh`
+	* `cd pybind11 && pip install --user .`
+* libtorch:
+	1. `pushd $( python -c 'import config; print(config.PREFIX)')`
+	* for cpu <br>
+	`wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-latest.zip` <br>
+	 for gpu <br>
+	`wget https://download.pytorch.org/libtorch/cu90/libtorch-shared-with-deps-latest.zip`
+	<br>
+	* `popd`
+* cmcts:
+	1. `./install.sh`
+
+### Config:
+* PREFIX - local installation of python packages
+
+### Generate data:
+* adjust config:
+	* `SIMS` - MCTS simulation per move
+	* `TRAIN_SAMPLES` - aproximate number of training samples to generate
+	* `ALPHA` - set alpha for rng or comment it out for default value
+	* `CPUCT` - PUCT constant controling exploration in MCTS
+
 
 ## TODO:
-* navstivit tieto tieto tahy
-	* na zaciatku nastavit heuristiku na 0
-	* pri vyberani tahov podla heuristiky nebrat v uvahu nevalidne tahy
-	* namiesto nulovania heuristickej dosky len odcitat odmenu
-* logging
-* multiprocessing/ virtual loss
-	* ako by to malo fungovat:
-	* vlakno pri prechode si zoberie lock od uzlu incrementuje vitual loss
-ktora sa potom odcita od W a teda pre dalsie vlakno to bude ako keby toto
-vlakno raz prehralo
-	* pri bakpropagaci ziska opat lock, updatne W N a dekrementuje virtual
-loss
-	* ako to bude fungovat s evaluaciou?
+* check itf it works with cuda
 * multithreaded evaulation
+* script for removing duplicated data and adding rotations of board
+* cache (maybe sometime)
 
-* script co nacita ulozene data odstrani duplikaty a prida rotacie
-* cache:
-	* pred evaluac
+## Notes:
+* if there are segfaults between cpp/python interface try smart pointers
 
 ## TRAINING PIPELINE:
 * Self-play:

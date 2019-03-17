@@ -1,6 +1,9 @@
 import sys
 import os
 
+##############################################################################
+#                                     mcts                                   #
+##############################################################################
 # number of simulations performed by MCTS
 SIMS = 3000
 
@@ -16,6 +19,10 @@ ALPHA = 0.1
 # c constant in PUCT algorithm
 CPUCT = 4.
 
+##############################################################################
+#                                    training                                #
+##############################################################################
+
 # number of epochs
 EPOCHS = 2
 
@@ -28,15 +35,15 @@ WINDOW = (4,2,20)
 #     IF YOU CHANGE ANY OF THE VARIABLES BELLOW YOU MUST RUN ./install.sh    #
 ##############################################################################
 
-# cmcts install prefix
-PREFIX = "{}/.local/bin".format(os.environ["HOME"])
+# installation prefix
+PREFIX = "{}/.local".format(os.environ["HOME"])
 
 # cmcts site path
 LOCAL_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_info[0],sys.version_info[1])
 
 # version
 MAJOR = 0
-MINOR = 2
+MINOR = 3
 # dimensions of board
 SHAPE = 13
 
