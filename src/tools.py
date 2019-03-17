@@ -1,8 +1,8 @@
 import sys
 sys.path.append('..')
-from config import SHAPE, SIZE, CMCTS_SITE_PATH, TRAIN_SAMPLES
+from config import SHAPE, SIZE, LOCAL_SITE_PATH, TRAIN_SAMPLES
 import site
-site.addsitedir(CMCTS_SITE_PATH)
+site.addsitedir(LOCAL_SITE_PATH)
 from time import time
 import numpy as np
 import json

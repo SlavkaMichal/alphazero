@@ -2,7 +2,7 @@ import sys
 sys.path.append('..')
 from config import *
 import site
-site.addsitedir(CMCTS_SITE_PATH)
+site.addsitedir(LOCAL_SITE_PATH)
 from model import simplerNN
 import cmcts
 import os
