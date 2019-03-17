@@ -8,14 +8,13 @@ int main()
 {
 	py::scoped_interpreter guard{};
 
-	py::module init = py::module::import("init");
-
-	Cmcts mcts = Cmcts(1, 0.5, init.attr("CPUCT").cast<double>());
-	py::object obj = init.attr("model_wraper");
-	py::object model = init.attr("model");
-	std::function<py::tuple(py::array_t<float>, py::object)> predictor = obj;
-	mcts.set_predictor(predictor,model);
+	Cmcts mcts = Cmcts(1, 0.5, 5);
+	std::string file ="/home/michal/workspace/bp/alphazero/src/simplerNN13.pt";
+	mcts.set_params(file);
+	mcts.simulate(100);
+	mcts.make_move(0);
 	mcts.simulate(1);
+	std::cout << mcts.repr();
 
 	return 0;
 }
