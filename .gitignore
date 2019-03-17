@@ -1,9 +1,12 @@
 __pycache__
+src/*.pt
+logs
 init.py
 mcts/build
+mcts/cmake
 mcts/cmcts.egg-info
 mcts/dist
 model
 data
 tests
-
+.info
