@@ -5,7 +5,7 @@
 #include "state.h"
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
-//#include <pybind11/stl.h>
+#include <pybind11/stl.h>
 #include <algorithm>
 #include <stack>
 #include <array>
@@ -16,10 +16,11 @@
 #include <math.h>
 #include <iostream>
 #include <string>
-//#include <pybind11/pybind11.h>
-//#include <pybind11/functional.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+#include <torch/script.h>
 #include <thread>
 
 struct Cmcts{
@@ -29,11 +30,12 @@ public:
 	void print_node(std::vector<int> &v);
 	void print_u(std::vector<int> &v);
 	void clear(void);                // restore to initial node
-	void clear_predictor();
+	void clear_params();
 	void simulate(int n);            // run n searches
-	void set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::object &d);
+	void set_params(std::string &file_name);
 	void set_seed(unsigned long int seed);
 	void set_alpha(double alpha);
+	void set_alpha();
 	void set_cpuct(float cpuct);
 	/* use of this function is depriciated use get_winner instead */
 	float get_winner();
@@ -53,7 +55,7 @@ public:
 #endif
 private:
 	void worker(int n);               // run one search starting from initial node
-	void search(State *state);               // run one search starting from initial node
+	void search(State *state, std::shared_ptr<torch::jit::script::Module> module);               // run one search starting from initial node
 	//void board_move(int action);
 
 	Node   *root_node = nullptr; // game node
@@ -62,8 +64,9 @@ private:
 	double *dir_noise;
 	double cpuct;
 	gsl_rng *r;
-	std::function<py::tuple(py::array_t<float>, py::object)> predict;     // predict function
-	py::object data;       // data passed to predict function
+	std::string param_name;
+	//std::function<py::tuple(py::array_t<float>, py::object)> predict;     // predict function
+	//py::object data;       // data passed to predict function
 };
 
 #endif

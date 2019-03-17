@@ -2,7 +2,7 @@ import sys
 sys.path.append('..')
 from config import *
 import site
-site.addsitedir(CMCTS_SITE_PATH)
+site.addsitedir(LOCAL_SITE_PATH)
 from model import simplerNN
 import cmcts
 import glob
@@ -53,14 +53,29 @@ def self_play_iteration(model_class):
             best = generation
         param_file = "../model/{}_{}.pt".format(model_name, best)
         logging.info("Loading model parameters from {}".format(param_file))
-        params = torch.load(param_file)
-        model.load_state_dict(prams['state_dict'])
+        if (not os.path.isfile(param_file)):
+            logging.info("No file with filename {} found".format(param_file))
+            logging.info("Saving new model parameters to {}".format(param_file))
+            torch.save({
+                'state_dict' : model.state_dict(),
+                'model_name' : "{}_{}".format(model_name, generation),
+                'generation' : 0
+                }, param_file)
+            tools.info_set(0, 0, 0)
+        else:
+            params = torch.load(param_file)
+            model.load_state_dict(prams['state_dict'])
 
     logging.info("MCTS initialised with alpha {}, cpuct {}")
+    example = torch.rand(1,2,SHAPE,SHAPE)
+    traced_script_module = torch.jit.trace(model, example)
+    traced_script_module.save("{}.pt".format(model_name))
+    return
+
     mcts0 = cmcts.mcts(seed=rand_uint32(), alpha=float(ALPHA), cpuct=float(CPUCT))
-    mcts0.set_predictor(model_wraper, model)
+    mcts0.set_predictor("{}.pt".format(model_name))
     mcts1 = cmcts.mcts(seed=rand_uint32(), alpha=ALPHA, cpuct=CPUCT)
-    mcts1.set_predictor(model_wraper, model)
+    mcts1.set_predictor("{}.pt".format(model_name))
 
     # dtype should be always dtype of input tensor
     data = []
@@ -85,6 +100,7 @@ def self_play_iteration(model_class):
     tools.info_iteration()
     np.save(data_file, npdata)
 
+    os.remove("{}.pt".format(model_name))
     return
 
 def self_play_game(mcts0, mcts1):

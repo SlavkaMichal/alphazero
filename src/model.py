@@ -55,8 +55,8 @@ class simplerNN(nn.Module):
     def forward(self, boards):
         # computing forward pass
         front = self.front(boards)
-        prob  = self.prob(front)
-        prob  = self.softmax(prob.view(prob.shape[0],-1))
+        prob_step  = self.prob(front)
+        prob  = self.softmax(prob_step.view(prob_step.shape[0],-1))
         value = self.value(front)
 
         return value, prob

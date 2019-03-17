@@ -5,6 +5,7 @@
 #include <pybind11/numpy.h>
 //#include <pybind11/stl.h>
 //#include <pybind11/pybind11.h>
+#include <torch/script.h>
 #include <pybind11/embed.h>
 #include <iomanip>
 #include <sstream>
@@ -23,7 +24,7 @@ public:
 	struct Node* next_node(int action);
 	struct Node* make_move(int action);
 	void backpropagate(int action, float value);
-	void set_prior(py::array_t<float> p, double* dir);
+	void set_prior(torch::Tensor p, double* dir);
 	void set_prior(State *state, double* dir);
 	std::array<int, SIZE>* counts();
 	std::string repr();

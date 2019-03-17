@@ -24,21 +24,20 @@ Node::
 }
 
 void Node::
-set_prior(py::array_t<float> p, double *dir)
+set_prior(torch::Tensor p, double *dir)
 {
 #ifdef THREADS
 	std::lock_guard<std::mutex> guard(mutex);
 #endif
 	std::cout<< "set" <<std::endl;
-	auto buff = p.request();
-	std::cout<< "buff " << buff.ndim <<","<< buff.shape[0] <<std::endl;
-	float *ptr = (float *)buff.ptr;
+	float *ptr = (float *)p.data_ptr();
 	if (nodeN != -1)
 		return;
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
 	std::cout << "childP " << childP.size() << std::endl;
 	for (int i = 0; i < SIZE; i++){
+		std::cout << ptr[i] << ", " <<std::endl;
 		// dir sum to 1 also p should
 		childP.at(i) = 0.75*ptr[i]+0.25*dir[i];
 	}

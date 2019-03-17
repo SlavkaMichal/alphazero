@@ -17,7 +17,7 @@
 
 namespace py = pybind11;
 
-using Board = std::array<int, SIZE*2>;
+using Board = std::array<char, SIZE*2>;
 
 struct State{
 	State();

@@ -41,9 +41,9 @@ Cmcts::clear()
 }
 
 void
-Cmcts::clear_predictor()
+Cmcts::clear_params()
 {
-	predict = nullptr;
+	param_name.clear();
 	return;
 }
 
@@ -71,6 +71,7 @@ Cmcts::set_cpuct(float cpuct)
 	this->cpuct = cpuct;
 	return;
 }
+
 void
 Cmcts::set_alpha(double alpha)
 {
@@ -79,14 +80,22 @@ Cmcts::set_alpha(double alpha)
 }
 
 void
-Cmcts::set_predictor(std::function<py::tuple(py::array_t<float>, py::object)> &p, py::object &d)
+Cmcts::set_alpha()
 {
-	predict = p;
-	data    = d;
-
 	double len = SHAPE *2; // average game lenght estimate
 	double num = (SIZE*len - (len*len+len)*0.5)/len;
 	std::fill(alpha, alpha+SIZE, 10/num);
+}
+
+void
+Cmcts::set_params(std::string &file_name)
+{
+	param_name = file_name;
+	std::cout << "param name" << param_name <<std::endl;
+	if (param_name.empty())
+		std::cout << "param name empty" <<std::endl;
+	else
+		std::cout << "param name not empty" <<std::endl;
 	return;
 }
 
@@ -103,7 +112,7 @@ Cmcts::simulate(int n)
 	if (n < 1)
 		throw std::runtime_error("Invalid input "+std::to_string(n)+" must be at least 1!");
 #ifndef HEUR
-	if (predict == nullptr){
+	if (param_name.empty()){
 		throw std::runtime_error("Predictor missing!");
 	}
 #endif
@@ -148,11 +157,19 @@ Cmcts::worker(int n)
 	std::cout<<std::this_thread::get_id()<< " started" <<std::endl;
 	std::cout<<std::this_thread::get_id()<< " has "<<n <<" jobs" <<std::endl;
 	State *search_state = new State(state);
+	std::shared_ptr<torch::jit::script::Module> module = nullptr;
+	if (!param_name.empty()){
+		module = torch::jit::load(param_name.c_str());
+		assert(module != nullptr);
+	}
+#ifdef CUDA
+	module.to(at::kCUDA);
+#endif
 
 	for (int i = 0; i < n; i++){
 		std::cout<<std::this_thread::get_id()<< " job "<<i <<std::endl;
 		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
-		search(search_state);
+		search(search_state, module);
 		std::cout<<std::this_thread::get_id()<< " search returned "<<i <<std::endl;
 		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
 		search_state->clear(state);
@@ -164,15 +181,16 @@ Cmcts::worker(int n)
 }
 
 void
-Cmcts::search(State *state)
+Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 {
 	Node* current = root_node;
 	std::stack<Node*> nodes;
 	std::stack<int>   actions;
 	float value = 0.;
 	int action;
-
-	py::tuple prediction_t;
+	std::vector<torch::jit::IValue> input;
+	std::vector<int64_t> sizes = {1, 2, SHAPE, SHAPE};
+	auto options = torch::TensorOptions().dtype(torch::kChar);
 
 	/* TODO
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
@@ -185,27 +203,43 @@ Cmcts::search(State *state)
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			std::cout<<std::this_thread::get_id()<< " heur def" <<std::endl;
-			if (predict != nullptr){
+			if (module != nullptr){
 				std::cout<<std::this_thread::get_id()<< " not null" <<std::endl;
-				py::gil_scoped_acquire acquire;
-				auto board =state->get_board();
-				prediction_t = predict(board, data);
-				std::cout<<std::this_thread::get_id()<< " cast" <<std::endl;
-				value = -prediction_t[0].cast<float>();
-				std::cout<<std::this_thread::get_id()<< " set" <<std::endl;
-				current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
+				// this will create tensor wraper around buffer
+				at::Tensor tensor = torch::from_blob(
+						(void *)state->board.data(),
+						at::IntList(sizes),
+						options);
+				tensor = tensor.toType(at::kFloat); //this will make a copy
+#ifdef CUDA
+				tensor.to(torch::Device(torch::kCUDA));
+#endif
+				input.push_back(tensor);
+				auto output = module->forward(input).toTuple();
+#ifdef CUDA
+				output.to(torch::Device(torch::kCPU));
+#endif
+				std::cout<<std::this_thread::get_id()<< " value" <<std::endl;
+				value = -output->elements()[0].toTensor().item<float>();
+				std::cout<<std::this_thread::get_id()<< " prior" <<std::endl;
+				current->set_prior(output->elements()[1].toTensor(), dir_noise);
 			}else{
 				value = -rollout();
 				current->set_prior(state, dir_noise);
 			}
 #else
-			//std::cout<<"2gil: " <<PyGILState_Check()<< std::endl;
 			std::cout<<std::this_thread::get_id()<< " else" <<std::endl;
-			py::gil_scoped_acquire acquire;
-			prediction_t = predict(state->get_board(), data);
+			at::Tensor tensor = torch::from_blob((void *)state->board.data(), at::IntList(sizes), options);
+			tensor = tensor.toType(at::kFloat); //this will make a copy
+#ifdef CUDA
+			tensor.to(at:kCUDA);
+#endif
+			input.push_back(tensor);
+			prediction_t = module->forward(input);
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 #endif
+			std::cout << current->repr();
 			std::cout <<std::this_thread::get_id()<< " search new node explored" << std::endl;
 			break;
 		}
@@ -358,10 +392,12 @@ Cmcts::repr()
 	std::string s;
 	s.append("Alpha: "+std::to_string(alpha[0])+"\n");
 	s.append("CPUCT: "+std::to_string(cpuct)+"\n");
-	if (predict == nullptr)
+	if (param_name.empty())
 		s.append("Heuristic: yes\n");
-	else
+	else{
 		s.append("Heuristic: no\n");
+		s.append("Parameters from: "+param_name+"\n");
+	}
 
 	s.append(state->repr());
 

@@ -11,7 +11,12 @@ print("Installing with parameters:")
 print("\tsize: {}, shape: {}x{}".format(SIZE,SHAPE,SHAPE))
 __version__ = "{}.{}".format(MAJOR, MINOR)
 
-extra_compile_args = ['-std=c++14', '-Werror', '-fvisibility=hidden', ]
+extra_compile_args = ['-std=c++14',
+        '-Werror',
+        '-fvisibility=hidden',
+        "-I/{}/pybind11".format(LOCAL_SITE_PATH),
+        "-I/{}/libpytorch/include".format(PREFIX)
+        ]
 if HEUR:
     extra_compile_args.append('-DHEUR')
 if DEBUG:
@@ -22,7 +27,7 @@ cmcts = Extension('cmcts',
         include_dirs = [get_include(), get_include(True)],
         language = 'c++',
         extra_compile_args = extra_compile_args,
-        extra_link_args = ['-lgsl', '-lgslcblas', '-lm', '-pthread'],
+        extra_link_args = ['-lgsl', '-lgslcblas', '-lm', '-pthread', ],
         define_macros=[
             ('SIZE', SIZE),
             ('SHAPE', SHAPE),
