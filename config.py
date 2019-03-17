@@ -29,10 +29,10 @@ WINDOW = (4,2,20)
 ##############################################################################
 
 # cmcts install prefix
-PREFIX = "{}/bin".format(os.environ["HOME"])
+PREFIX = "{}/.local/bin".format(os.environ["HOME"])
 
 # cmcts site path
-CMCTS_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_info[0],sys.version_info[1])
+LOCAL_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_info[0],sys.version_info[1])
 
 # version
 MAJOR = 0
