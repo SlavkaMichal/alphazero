@@ -80,7 +80,7 @@ Cmcts::set_alpha(double alpha)
 }
 
 void
-Cmcts::set_alpha()
+Cmcts::set_alpha_default()
 {
 	double len = SHAPE *2; // average game lenght estimate
 	double num = (SIZE*len - (len*len+len)*0.5)/len;
@@ -91,11 +91,6 @@ void
 Cmcts::set_params(std::string &file_name)
 {
 	param_name = file_name;
-	std::cout << "param name" << param_name <<std::endl;
-	if (param_name.empty())
-		std::cout << "param name empty" <<std::endl;
-	else
-		std::cout << "param name not empty" <<std::endl;
 	return;
 }
 
@@ -118,10 +113,11 @@ Cmcts::simulate(int n)
 #endif
 
 	// divide workload
-	py::gil_scoped_release release;
-	std::cout<<std::this_thread::get_id()<< " parent thread" <<std::endl;
+	std::cout << "releasing scope" << std::endl;
+	//py::gil_scoped_release release;
+	std::cout << "released scope" << std::endl;
 #ifdef THREADS
-	std::cout << "creating threads" << std::endl;
+	std::cout << "threadssss!!!"<< std::endl;
 	int th_num = THREADS;
 	if (n < th_num){
 		th_num = n;
@@ -141,11 +137,9 @@ Cmcts::simulate(int n)
 		threads[i].join();
 	}
 
-	std::cout<< "delete threads" <<std::endl;
 	delete[] threads;
-	std::cout<< "deleted threads" <<std::endl;
 #else
-	std::cout <<"not creating threads" << std::endl;
+	std::cout <<" no threads??"<< std::endl;
 	worker(n);
 #endif
 	return;
@@ -154,30 +148,28 @@ Cmcts::simulate(int n)
 void
 Cmcts::worker(int n)
 {
-	std::cout<<std::this_thread::get_id()<< " started" <<std::endl;
-	std::cout<<std::this_thread::get_id()<< " has "<<n <<" jobs" <<std::endl;
-	State *search_state = new State(state);
-	std::shared_ptr<torch::jit::script::Module> module = nullptr;
-	if (!param_name.empty()){
-		module = torch::jit::load(param_name.c_str());
-		assert(module != nullptr);
+	std::cout <<" new state *****"<< std::endl;
+	std::cout <<" new state *****"<< std::endl;
+	std::cout <<" new module &&&&&&*****"<< std::endl;
+	if (param_name.empty()){
+		return;
 	}
+	State *search_state = new State(state);
+		std::cout << "loading params" << std::endl;
+		std::shared_ptr<torch::jit::script::Module> module = torch::jit::load(param_name.c_str());
+		std::cout<< std::endl<< std::endl << "loaded params" << std::endl<< std::endl;
+		assert(module != nullptr);
 #ifdef CUDA
 	module.to(at::kCUDA);
 #endif
 
 	for (int i = 0; i < n; i++){
-		std::cout<<std::this_thread::get_id()<< " job "<<i <<std::endl;
-		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
 		search(search_state, module);
-		std::cout<<std::this_thread::get_id()<< " search returned "<<i <<std::endl;
-		std::cout<<std::this_thread::get_id()<< " "<<search_state <<std::endl;
 		search_state->clear(state);
 	}
 
-	std::cout<<std::this_thread::get_id()<< " delete state" <<std::endl;
 	delete search_state;
-	std::cout<<std::this_thread::get_id()<< " deleted state" <<std::endl;
+	return;
 }
 
 void
@@ -188,9 +180,13 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 	std::stack<int>   actions;
 	float value = 0.;
 	int action;
+	std::cout << "creating IValue" << std::endl;
 	std::vector<torch::jit::IValue> input;
+	std::cout << "created IValue" << std::endl;
 	std::vector<int64_t> sizes = {1, 2, SHAPE, SHAPE};
+	std::cout << "creating Options" << std::endl;
 	auto options = torch::TensorOptions().dtype(torch::kChar);
+	std::cout << "created Options" << std::endl;
 
 	/* TODO
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
@@ -199,18 +195,19 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 	while (1){
 		if (current->nodeN == -1){
 			/* node expansion */
-			std::cout<<std::this_thread::get_id()<< " initializing node" <<std::endl;
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
-			std::cout<<std::this_thread::get_id()<< " heur def" <<std::endl;
 			if (module != nullptr){
-				std::cout<<std::this_thread::get_id()<< " not null" <<std::endl;
 				// this will create tensor wraper around buffer
+				std::cout << "creating tesor from blob" << std::endl;
 				at::Tensor tensor = torch::from_blob(
 						(void *)state->board.data(),
 						at::IntList(sizes),
 						options);
+				std::cout << "created tesor from blob" << std::endl;
+				std::cout << "casting to kFloat" << std::endl;
 				tensor = tensor.toType(at::kFloat); //this will make a copy
+				std::cout << "casted to kFloat" << std::endl;
 #ifdef CUDA
 				tensor.to(torch::Device(torch::kCUDA));
 #endif
@@ -219,16 +216,13 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 #ifdef CUDA
 				output.to(torch::Device(torch::kCPU));
 #endif
-				std::cout<<std::this_thread::get_id()<< " value" <<std::endl;
 				value = -output->elements()[0].toTensor().item<float>();
-				std::cout<<std::this_thread::get_id()<< " prior" <<std::endl;
 				current->set_prior(output->elements()[1].toTensor(), dir_noise);
 			}else{
 				value = -rollout();
 				current->set_prior(state, dir_noise);
 			}
 #else
-			std::cout<<std::this_thread::get_id()<< " else" <<std::endl;
 			at::Tensor tensor = torch::from_blob((void *)state->board.data(), at::IntList(sizes), options);
 			tensor = tensor.toType(at::kFloat); //this will make a copy
 #ifdef CUDA
@@ -239,18 +233,13 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			value = -prediction_t[0].cast<float>();
 			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
 #endif
-			std::cout << current->repr();
-			std::cout <<std::this_thread::get_id()<< " search new node explored" << std::endl;
 			break;
 		}
 
 		/* select new node, if it's leaf then expand */
 		/* select is also updating node */
-		std::cout<<std::this_thread::get_id()<< " select" <<std::endl;
 		action = current->select(state, cpuct);
-		std::cout<<std::this_thread::get_id()<< " make_move" <<std::endl;
 		state->make_move(action);
-		std::cout<<std::this_thread::get_id()<< " push"<< current <<std::endl;
 		nodes.push(current);
 		actions.push(action);
 
@@ -270,21 +259,16 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 		}
 		current = current->next_node(action);
 	}
-	std::cout <<std::this_thread::get_id()<< " ready to backprop" << std::endl;
 	/* backpropagate value */
 	while (!nodes.empty()){
-		std::cout <<std::this_thread::get_id()<< " ready to backprop" << std::endl;
 		current = nodes.top();
-		std::cout<<std::this_thread::get_id()<< " pop"<< current <<std::endl;
 		action  = actions.top();
 		nodes.pop();
 		actions.pop();
 
-		std::cout<<std::this_thread::get_id()<< " backprop" <<std::endl;
 		current->backpropagate(action, value);
 		value = -value;
 	}
-	std::cout <<std::this_thread::get_id()<< " search return" << std::endl;
 
 	return;
 }
@@ -302,7 +286,7 @@ Cmcts::make_move(int action)
 }
 
 void
-Cmcts::make_move(int y, int x)
+Cmcts::make_movexy(int x, int y)
 {
 	if (y >= SHAPE || x >= SHAPE)
 		throw std::runtime_error("Invalid index y:"+std::to_string(y)+" or x: "+std::to_string(x)+" (range is 0-"+std::to_string(SIZE)+")!");
@@ -414,7 +398,6 @@ Cmcts::print_node(std::vector<int> &v)
 			return;
 		}
 		n = n->next_node(i);
-		std::cout << i << std::endl;
 	}
 	py::print(n->repr());
 	return;
@@ -430,7 +413,6 @@ Cmcts::print_u(std::vector<int> &v)
 			return;
 		}
 		n = n->next_node(i);
-		std::cout << i << std::endl;
 	}
 	py::print(n->print_u(state, cpuct));
 	return;

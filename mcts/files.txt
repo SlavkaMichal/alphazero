@@ -1,9 +1,0 @@
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/cmcts.cpython-37m-x86_64-linux-gnu.so
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/cmcts.py
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/not-zip-safe
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/native_libs.txt
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/dependency_links.txt
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/top_level.txt
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/SOURCES.txt
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/EGG-INFO/PKG-INFO
-/usr/lib/python3.7/site-packages/cmcts-0.1-py3.7-linux-x86_64.egg/__pycache__/cmcts.cpython-37.pyc

@@ -26,7 +26,7 @@
 struct Cmcts{
 public:
 	void make_move(int action);      // change root_node by taking action
-	void make_move(int y, int x);
+	void make_movexy(int x, int y);
 	void print_node(std::vector<int> &v);
 	void print_u(std::vector<int> &v);
 	void clear(void);                // restore to initial node
@@ -35,7 +35,7 @@ public:
 	void set_params(std::string &file_name);
 	void set_seed(unsigned long int seed);
 	void set_alpha(double alpha);
-	void set_alpha();
+	void set_alpha_default();
 	void set_cpuct(float cpuct);
 	/* use of this function is depriciated use get_winner instead */
 	float get_winner();

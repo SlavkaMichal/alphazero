@@ -39,26 +39,9 @@ State::is_valid(int action)
 py::array_t<float>
 State::get_board()
 {
-	//auto b = py::array_t<float>(board.size());
-	//py::buffer_info buff = b.request();
-	//float *ptr = (float*)buff.ptr;
-	//std::cout<< "buff " << buff.ndim <<","<< buff.shape[0] <<std::endl;
-	//std::cout<< "arr " << b.ndim()<<","<< b.itemsize() <<std::endl;
-	//std::cout<< "board SIZE " << board.size()<< " "<< sizeof(float) <<std::endl;
-
 	auto b = new std::vector<float>(board.begin(),board.end());
 	if (player == 1)
 		std::swap_ranges(b->begin(), b->begin()+SIZE, b->begin()+SIZE);
-
-	//if (player == 1)
-	//	/* swap */
-	//	for (int i = 0; i < SIZE; i++){
-	//		ptr[i+SIZE] = board[i];
-	//		ptr[i]      = board[i+SIZE];
-	//	}
-	//else
-	//	for (int i = 0; i < SIZE*2; i++)
-	//		ptr[i] = board[i];
 
 	auto capsule = py::capsule(b, [](void *b) { delete reinterpret_cast<std::vector<float>*>(b);});
 	return py::array_t<float>(std::vector<ptrdiff_t>{2,SHAPE,SHAPE}, b->data(), capsule);
@@ -67,14 +50,9 @@ State::get_board()
 void
 State::clear(const State *obj)
 {
-	std::cout<<std::this_thread::get_id()<< " " << obj <<std::endl;
-	std::cout<<std::this_thread::get_id()<< " clear player" <<std::endl;
 	player   = obj->player;
-	std::cout<<std::this_thread::get_id()<< " clear move_cnt" <<std::endl;
 	move_cnt = obj->move_cnt;
-	std::cout<<std::this_thread::get_id()<< " clear winner" <<std::endl;
 	winner   = obj->winner;
-	std::cout<<std::this_thread::get_id()<< " clear board" <<std::endl;
 	board    = obj->board;
 #ifdef HEUR
 	hboard   = obj->hboard;
@@ -359,16 +337,10 @@ State::update(int action)
 	for (int i = 4; i >= 0; i--){
 		if (lbound >= l)
 			break;
-		//std::cout << i <<"-l: " << l;
 		if (rbound-lbound > 5){
 			//hboard.at(player+l) += std::pow(reward,i);
 			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(4, reward);
 		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action-l-1,3);
-//			//std::cout << " -" << std::pow(4, action-l-1);
-//		}
 		l -= step;
 		//std::cout << std::endl;
 	}
