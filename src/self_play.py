@@ -67,8 +67,16 @@ def self_play_iteration(model_class):
             model.load_state_dict(prams['state_dict'])
 
     logging.info("MCTS initialised with alpha {}, cpuct {}")
-    example = torch.rand(1,2,SHAPE,SHAPE)
-    traced_script_module = torch.jit.trace(model, example)
+
+    if CUDA:
+        example = torch.rand(1,2,SHAPE,SHAPE).cuda()
+        model.cuda()
+    else:
+        example = torch.rand(1,2,SHAPE,SHAPE)
+
+    with torch.no_grad():
+        traced_script_module = torch.jit.trace(model, example)
+
     traced_script_module.save("{}.pt".format(model_name))
     return
 
@@ -178,3 +186,4 @@ def model_wraper(board, model):
 
 if __name__ == "__main__":
     self_play_iteration(simplerNN)
+    pass
