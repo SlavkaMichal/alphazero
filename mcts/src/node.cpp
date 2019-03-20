@@ -43,6 +43,7 @@ set_prior(torch::Tensor p, double *dir)
 	return;
 }
 
+#ifdef HEUR
 void Node::
 set_prior(State *state, double* dir)
 {
@@ -65,6 +66,7 @@ set_prior(State *state, double* dir)
 	nodeN = 0;
 	return;
 }
+#endif
 
 void Node::
 backpropagate(int action, float value)

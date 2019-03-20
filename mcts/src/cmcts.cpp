@@ -113,11 +113,8 @@ Cmcts::simulate(int n)
 #endif
 
 	// divide workload
-	std::cout << "releasing scope" << std::endl;
-	//py::gil_scoped_release release;
-	std::cout << "released scope" << std::endl;
+	py::gil_scoped_release release;
 #ifdef THREADS
-	std::cout << "threadssss!!!"<< std::endl;
 	int th_num = THREADS;
 	if (n < th_num){
 		th_num = n;
@@ -139,7 +136,6 @@ Cmcts::simulate(int n)
 
 	delete[] threads;
 #else
-	std::cout <<" no threads??"<< std::endl;
 	worker(n);
 #endif
 	return;
@@ -148,17 +144,17 @@ Cmcts::simulate(int n)
 void
 Cmcts::worker(int n)
 {
-	std::cout <<" new state *****"<< std::endl;
-	std::cout <<" new state *****"<< std::endl;
-	std::cout <<" new module &&&&&&*****"<< std::endl;
+	std::shared_ptr<torch::jit::script::Module> module = nullptr;
 	if (param_name.empty()){
-		return;
+#ifndef HEUR
+		throw std::runtime_error("No module name set");
+#else
+		module = torch::jit::load(param_name.c_str());
+		assert(module != nullptr);
+#endif
 	}
 	State *search_state = new State(state);
-		std::cout << "loading params" << std::endl;
-		std::shared_ptr<torch::jit::script::Module> module = torch::jit::load(param_name.c_str());
-		std::cout<< std::endl<< std::endl << "loaded params" << std::endl<< std::endl;
-		assert(module != nullptr);
+
 #ifdef CUDA
 	module.to(at::kCUDA);
 #endif
@@ -180,38 +176,36 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 	std::stack<int>   actions;
 	float value = 0.;
 	int action;
-	std::cout << "creating IValue" << std::endl;
 	std::vector<torch::jit::IValue> input;
-	std::cout << "created IValue" << std::endl;
 	std::vector<int64_t> sizes = {1, 2, SHAPE, SHAPE};
-	std::cout << "creating Options" << std::endl;
 	auto options = torch::TensorOptions().dtype(torch::kChar);
-	std::cout << "created Options" << std::endl;
 
 	/* TODO
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
 	   0 ak hra pokracuje
 	   */
+	int cnt = 0;
 	while (1){
 		if (current->nodeN == -1){
 			/* node expansion */
+
+			/* generating dirichlet noise */
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
+			/* with heuristic */
 			if (module != nullptr){
-				// this will create tensor wraper around buffer
-				std::cout << "creating tesor from blob" << std::endl;
+				/* create tensor wraper around buffer */
 				at::Tensor tensor = torch::from_blob(
 						(void *)state->board.data(),
 						at::IntList(sizes),
 						options);
-				std::cout << "created tesor from blob" << std::endl;
-				std::cout << "casting to kFloat" << std::endl;
-				tensor = tensor.toType(at::kFloat); //this will make a copy
-				std::cout << "casted to kFloat" << std::endl;
+				tensor = tensor.toType(at::kFloat); // this will copy data
 #ifdef CUDA
 				tensor.to(torch::Device(torch::kCUDA));
+				// cuda synchronize??
 #endif
 				input.push_back(tensor);
+				/* evaluate model */
 				auto output = module->forward(input).toTuple();
 #ifdef CUDA
 				output.to(torch::Device(torch::kCPU));
@@ -223,15 +217,24 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				current->set_prior(state, dir_noise);
 			}
 #else
-			at::Tensor tensor = torch::from_blob((void *)state->board.data(), at::IntList(sizes), options);
+			/* no heuristic */
+			/* create tensor wraper around buffer */
+			at::Tensor tensor = torch::from_blob(
+					(void *)state->board.data(),
+					at::IntList(sizes),
+					options);
 			tensor = tensor.toType(at::kFloat); //this will make a copy
 #ifdef CUDA
-			tensor.to(at:kCUDA);
+			tensor.to(torch::Device(torch::kCUDA));
 #endif
 			input.push_back(tensor);
-			prediction_t = module->forward(input);
-			value = -prediction_t[0].cast<float>();
-			current->set_prior(prediction_t[1].cast<py::array_t<float>>(), dir_noise);
+			/* evaluate model */
+			auto output = module->forward(input).toTuple();
+#ifdef CUDA
+			output.to(torch::Device(torch::kCPU));
+#endif
+			value = -output->elements()[0].toTensor().item<float>();
+			current->set_prior(output->elements()[1].toTensor(), dir_noise);
 #endif
 			break;
 		}
@@ -254,6 +257,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			if (state->winner == 0 || state->winner == 1)
 				value = 1.;
 			else
+				/* result is a draw (winner value is 0.5) */
 				value = 0.;
 			break;
 		}
@@ -307,6 +311,24 @@ Cmcts::get_board()
 }
 
 py::array_t<float>
+Cmcts::get_prob()
+{
+	/* all nonvalid moves should not be played,
+	   they are skiped in select phase so visit count should be zero
+	 */
+	std::array<int, SIZE>* counts = root_node->counts();
+	int sum = root_node->nodeN;
+	//auto v = new std::vector<float>(counts->begin(), counts->end());
+	auto b = py::array_t<float>(counts->size());
+	py::buffer_info buff = b.request();
+	float *ptr = (float*)buff.ptr;
+	for (int i = 0; i < counts->size(); i++)
+		ptr[i] = counts->at(i);
+	return b;
+}
+
+#ifdef HEUR
+py::array_t<float>
 Cmcts::get_heur()
 {
 	auto b = py::array_t<float>(state->hboard.size());
@@ -320,30 +342,6 @@ Cmcts::get_heur()
 	//return py::array_t<float>(std::vector<ptrdiff_t>{2,SHAPE,SHAPE}, h->data(), capsule);
 }
 
-py::array_t<float>
-Cmcts::get_prob()
-{
-	/* all nonvalid moves should not be played,
-	   they are skiped in select phase so visit count should be zero
-	 */
-	std::array<int, SIZE>* counts = root_node->counts();
-	int sum = root_node->nodeN;
-	//auto v = new std::vector<float>(counts->begin(), counts->end());
-	auto b = py::array_t<float>(counts->size());
-	py::buffer_info buff = b.request();
-	float *ptr = (float*)buff.ptr;
-	for (int i = 0; i < state->hboard.size(); i++)
-		ptr[i] = counts->at(i);
-	return b;
-
-	//for (int i = 0; i < SIZE; i++)
-	//	v->at(i) = v->at(i) / sum;
-	//auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<float>*>(v);});
-
-	//return py::array_t<float>(v->size(), v->data(), capsule);
-}
-
-#ifdef HEUR
 float
 Cmcts::rollout()
 {

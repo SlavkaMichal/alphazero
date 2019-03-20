@@ -315,7 +315,6 @@ State::update(int action)
 	hboard[SIZE+action] = 0;
 	hboard[action] = 0;
 
-	//std::cout << "action: " <<action << std::endl;
 	// horizontal -
 	l = action-1;
 	r = action+1;
@@ -338,27 +337,21 @@ State::update(int action)
 		if (lbound >= l)
 			break;
 		if (rbound-lbound > 5){
-			//hboard.at(player+l) += std::pow(reward,i);
 			hboard.at(player+l) += reward*i;
 		}
 		l -= step;
-		//std::cout << std::endl;
 	}
 	for (int i = 4; i >= 0; i--){
 		if (rbound <= r)
 			break;
-		//std::cout << i <<"-r: " << r ;
 		if (rbound-lbound > 5){
 			//hboard.at(player+r) += std::pow(reward,i);
 			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(4, reward);
 		}
 //		if (r-action-step > i*step){
 //			hboard.at(player+r) -= std::pow(r-action-1,3);
-//			//std::cout << " -" << std::pow(4, action-l-1);
 //		}
 		r += step;
-		//std::cout << std::endl;
 	}
 
 
@@ -383,33 +376,17 @@ State::update(int action)
 	for (int i = 4; i >= 0; i--){
 		if (lbound >= l)
 			break;
-		//std::cout << i <<"|l: " << l;
 		if (rbound-lbound > 5*SHAPE){
-			//hboard.at(player+l) += std::pow(reward,i);
 			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
 		l -= step;
-		//std::cout << std::endl;
 	}
 	for (int i = 4; i >= 0; i--){
 		if (rbound <= r)
 			break;
-		//std::cout << i <<"|r: " << r ;
 		if (rbound-lbound > 5*SHAPE){
-			//hboard.at(player+r) += std::pow(reward,i);
 			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
-		//std::cout << std::endl;
 		r += step;
 	}
 
@@ -432,39 +409,25 @@ State::update(int action)
 	reward = (r-l)/step-1;
 	if (reward == 4)
 		reward *= 2;
-	//std::cout << "r: "<<r<<" l: "<<l<<std::endl;
-	//std::cout << "rb: "<<rbound<<" lb: "<<lbound<<std::endl;
 	for (int i = 4; i >= 0; i--){
 		if (lbound >= l)
 			break;
-		//std::cout << i <<"\\l: " << l ;
 		if ((rbound-lbound)/step > 5){
 			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 			//hboard.at(player+l) += std::pow(reward,i);
 		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1,3);
-//		}
-		//std::cout << std::endl;
 		l -= step;
 	}
 	for (int i = 4; i >= 0; i--){
 		if (rbound <= r)
 			break;
-		//std::cout << i <<"\\r: " << r ;
 		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+r) += std::pow(reward,i);
 			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 		}
 //		if (r-action-step > i*step){
 //			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
 //		}
 		r += step;
-		//std::cout << std::endl;
 	}
 
 	/* lr diagonal / */
@@ -475,10 +438,8 @@ State::update(int action)
 	step = SHAPE-1;
 
 	tmp = x+y < SHAPE-1 ? x+y-step : (y+x-step)*SHAPE;
-	//std::cout << "tmp: "<<tmp<<std::endl;
 	while (tmp < lbound && !board[op+lbound]) lbound -= step;
 	tmp = x+y < SHAPE-1 ? (x+y)*SHAPE+step : step*SHAPE + x + y;
-	//std::cout << "tmp: "<<tmp<<std::endl;
 	while (tmp > rbound && !board[op+rbound]) rbound += step;
 
 	while (lbound < l && board[player+l]) l -= step;
@@ -487,39 +448,21 @@ State::update(int action)
 	reward = (r-l)/step-1;
 	if (reward == 4)
 		reward *= 2;
-	//std::cout << "r: "<<r<<" l: "<<l<<std::endl;
-	//std::cout << "rb: "<<rbound<<" lb: "<<lbound<<std::endl;
 	for (int i = 4; i >= 0; i--){
 		if (lbound >= l)
 			break;
-		//std::cout << i <<"/l: " << l ;
 		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+l) += std::pow(reward,i);
 			hboard.at(player+l) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 		}
-//		if (action-l-step > i*step){
-//			hboard.at(player+l) -= std::pow(action/SHAPE-l/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
 		l -= step;
-		//std::cout << std::endl;
 	}
 	for (int i = 4; i >= 0; i--){
 		if (rbound <= r)
 			break;
-		//std::cout << i <<"/r: " << r ;
 		if ((rbound-lbound)/step > 5){
-			//hboard.at(player+r) += std::pow(reward,i);
 			hboard.at(player+r) += reward*i;
-			//std::cout << " +" << std::pow(reward,3);
 		}
-//		if (r-action-step > i*step){
-//			hboard.at(player+r) -= std::pow(r/SHAPE-action/SHAPE-1,3);
-//			//std::cout << " -" << std::pow(action-l-1);
-//		}
 		r += step;
-		//std::cout << std::endl;
 	}
 
 	return;

@@ -13,8 +13,6 @@ int main()
 	mcts.set_params(file);
 	mcts.simulate(10);
 	mcts.make_move(0);
-	mcts.simulate(1);
-	std::cout << mcts.repr();
 
 	return 0;
 }
