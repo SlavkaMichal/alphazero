@@ -1,6 +1,5 @@
 #!/usr/bin/bash
 source env.sh
-echo "ARGC $#"
 
 if [ "$#" -ge "1" ]; then
 	PYTHON=$1
@@ -22,7 +21,8 @@ else
 	exit
 fi
 SITE=$($PYTHON -c 'import config; print(config.LOCAL_SITE_PATH)')
-PYTORCH=$($PYTHON -c 'import config; print(config.PYTORCH)')
+INSTALL_PYTORCH=$($PYTHON -c 'import config; print(config.INSTALL_PYTORCH)')
+INSTALL_PYBIND11=$($PYTHON -c 'import config; print(config.INSTALL_PYBIND11)')
 PREFIX=$($PYTHON -c 'import config; print(config.PREFIX)')
 DEBUG=$($PYTHON -c 'import config; print(config.DEBUG)')
 PYVERSION=$($PYTHON -c 'import config; print(config.PYVERSION)')
@@ -40,10 +40,12 @@ fi
 test config.py -nt mcts/.timestamp && rm -rf mcts/build
 test config.py -nt mcts/.timestamp && echo "Removing build directory"
 
-echo "Installing pybind11"
-out=$($PYTHON -m pip install --user pybind11)
-if [ $DEBUG == "True" ]; then
-	echo $out
+if [ $INSTALL_PYBIND11 == "True" ]; then
+	echo "Installing pybind11"
+	out=$($PYTHON -m pip install --user pybind11)
+	if [ $DEBUG == "True" ]; then
+		echo $out
+	fi
 fi
 
 #pushd $PREFIX > /dev/null
@@ -60,9 +62,8 @@ fi
 #else
 #	echo "libtorch installed"
 #fi
-echo $PYTORCH
-if [ $PYTORCH == "True" ]; then
-	echo "Installing libtorch"
+if [ $INSTALL_PYTORCH == "True" ]; then
+	echo "Installing pytorch with libtorch"
 	pushd pytorch > /dev/null
 	git checkout 916a670828bad914907f628e88e6c0ca6bb9b365
 	out=$(git submodule update --init --recursive)

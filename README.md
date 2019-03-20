@@ -5,6 +5,9 @@
 * `git clone --recursive https://github.com/SlavkaMichal/alphazero.git`
 * `git clone --recursive git@github.com:SlavkaMichal/alphazero.git`
 * `./install.sh /python/path`
+* Note: at this moment `cmake_prefix_path` to pybind11 and pytorch is not
+deduced automatically you have to adjust it in `mcts/CMakeLists.txt`
+accordingly
 
 ### Config:
 * PREFIX - local installation of python packages and other dependecies
@@ -19,13 +22,13 @@
 
 
 ## TODO:
-* check itf it works with cuda
-* multithreaded evaulation
+* automacally find `cmake_prefix_path` for pybind11 and pytorch
 * script for removing duplicated data and adding rotations of board
-* cache (maybe sometime)
+* create evaluation thread
 * check if cuda works
 * remove debugging output
 * clean up define (not working without HEUR)
+* cache (maybe sometime)
 
 ## Notes:
 * if there are segfaults between cpp/python interface try smart pointers

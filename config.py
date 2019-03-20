@@ -38,12 +38,19 @@ WINDOW = (4,2,20)
 # installation prefix
 PREFIX = "{}/.local".format(os.environ["HOME"])
 
-# test if pytorch is installed
-PYTORCH = True
+# test if pytorch is available
+INSTALL_PYTORCH = False
 try:
     import pytorch
 except ModlueNotFoundError:
-    PYTORCH = False
+    INSTALL_PYTORCH = True
+
+# test if pybind11 is available
+INSTALL_PYBIND11 = False
+try:
+    import pybind11
+except ModlueNotFoundError:
+    INSTALL_PYBIND11 = True
 
 # cmcts site path
 LOCAL_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_info[0],sys.version_info[1])
@@ -66,7 +73,7 @@ THREADS = 8
 CUDA = False
 
 # compile with support for heuristic and rollout
-HEUR = True
+HEUR = False
 
 # debug output
 DEBUG = False
