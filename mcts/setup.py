@@ -1,48 +1,72 @@
-from setuptools import setup, Extension
-from setuptools.command import build_ext
-from pybind11 import get_include
-from os.path import dirname
+import os
 import sys
-sys.path.append(dirname(sys.path[0]))
-from config import SIZE, SHAPE, HEUR, DEBUG
-from config import MINOR, MAJOR
+import subprocess
+
+from config import *
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
 print("Installing with parameters:")
 print("\tsize: {}, shape: {}x{}".format(SIZE,SHAPE,SHAPE))
 __version__ = "{}.{}".format(MAJOR, MINOR)
+ext_name = 'cmcts'
 
-extra_compile_args = ['-std=c++14',
-        '-Werror',
-        '-fvisibility=hidden',
-        "-I/{}/pybind11".format(LOCAL_SITE_PATH),
-        "-I/{}/libpytorch/include".format(PREFIX)
-        ]
-if HEUR:
-    extra_compile_args.append('-DHEUR')
-if DEBUG:
-    extra_compile_args.append('-DDBG')
+class MCTSExtension(Extension):
+    def __init__(self, name, sourcedir=''):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
-cmcts = Extension('cmcts',
-        ['module.cpp','cmcts.cpp','node.cpp', 'state.cpp'],
-        include_dirs = [get_include(), get_include(True)],
-        language = 'c++',
-        extra_compile_args = extra_compile_args,
-        extra_link_args = ['-lgsl', '-lgslcblas', '-lm', '-pthread', ],
-        define_macros=[
-            ('SIZE', SIZE),
-            ('SHAPE', SHAPE),
-            ('THREADS', 8),
-            ('MAJOR', MAJOR),
-            ('MINOR', MINOR),
-            ]
-        )
+class MCTSBuild(build_ext):
+    def run(self):
+        try:
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError("CMake must be installed to build the following extensions: " +
+                               ", ".join(e.name for e in self.extensions))
+        for ext in self.extensions:
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+        cmake_args = [
+                '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+                '-DPYTHON_EXECUTABLE=' + sys.executable,
+                '-DSHAPE={}'.format(SHAPE),
+                '-DSIZE={}' .format(SIZE),
+                '-DMAJOR={}'.format(MAJOR),
+                '-DMINOR={}'.format(MINOR),
+                ]
+
+        if HEUR:
+            cmake_args.append('-DHEUR=ON')
+        if EXTENSION:
+            cmake_args.append('-DEXT=ON')
+        if DEBUG:
+            cmake_args.append('-DDEBUG=ON')
+        if THREADS:
+            cmake_args.append('-DTHREADS={}'.format(THREADS))
+        if CUDA:
+            cmake_args.append('-DCUDA=ON')
+
+        env = os.environ.copy()
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
+                                                              self.distribution.get_version())
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        print(ext.sourcedir)
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-        name='cmcts',
+        name=ext_name,
         version=__version__,
         author='Michal Slavka',
-#        email='slavka.michal@gmail.com',
+        author_email='slavka.michal@gmail.com',
         description='Monte Carlo Tree Search implementation for gomoku.',
-        ext_modules=[ cmcts ],
-        cmdclass={'build_ext' : build_ext.build_ext}
+        long_description='',
+        ext_modules=[ MCTSExtension(ext_name) ],
+        cmdclass=dict(build_ext=MCTSBuild),
+        zip_safe=False
         )

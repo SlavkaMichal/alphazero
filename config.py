@@ -38,17 +38,32 @@ WINDOW = (4,2,20)
 # installation prefix
 PREFIX = "{}/.local".format(os.environ["HOME"])
 
+# test if pytorch is installed
+PYTORCH = True
+try:
+    import pytorch
+except ModlueNotFoundError:
+    PYTORCH = False
+
 # cmcts site path
 LOCAL_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_info[0],sys.version_info[1])
+PYVERSION  = True if sys.version_info[0] >= 3 and sys.version_info[1] > 4 else False
 
 # version
 MAJOR = 0
 MINOR = 3
+
 # dimensions of board
 SHAPE = 13
 
 # number of positions on board
 SIZE = SHAPE*SHAPE
+
+# number of threads
+THREADS = 8
+
+# cuda availability
+CUDA = False
 
 # compile with support for heuristic and rollout
 HEUR = True
@@ -56,3 +71,5 @@ HEUR = True
 # debug output
 DEBUG = False
 
+# compile python extension
+EXTENSION = False

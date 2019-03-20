@@ -1,24 +1,13 @@
 # AlphaZero gomoku
 
 ## How to:
-### Dependencies:
-* pybind11:
-	1. `git clone https://github.com/pybind/pybind11.git`
-	* `source env.sh`
-	* `cd pybind11 && pip install --user .`
-* libtorch:
-	1. `pushd $( python -c 'import config; print(config.PREFIX)')`
-	* for cpu <br>
-	`wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-latest.zip` <br>
-	 for gpu <br>
-	`wget https://download.pytorch.org/libtorch/cu90/libtorch-shared-with-deps-latest.zip`
-	<br>
-	* `popd`
-* cmcts:
-	1. `./install.sh`
+### Instalation:
+* `git clone --recursive https://github.com/SlavkaMichal/alphazero.git`
+* `git clone --recursive git@github.com:SlavkaMichal/alphazero.git`
+* `./install.sh /python/path`
 
 ### Config:
-* PREFIX - local installation of python packages
+* PREFIX - local installation of python packages and other dependecies
 
 ### Generate data:
 * adjust config:
@@ -26,6 +15,7 @@
 	* `TRAIN_SAMPLES` - aproximate number of training samples to generate
 	* `ALPHA` - set alpha for rng or comment it out for default value
 	* `CPUCT` - PUCT constant controling exploration in MCTS
+* run `src/self-play.py`
 
 
 ## TODO:
@@ -33,6 +23,9 @@
 * multithreaded evaulation
 * script for removing duplicated data and adding rotations of board
 * cache (maybe sometime)
+* check if cuda works
+* remove debugging output
+* clean up define (not working without HEUR)
 
 ## Notes:
 * if there are segfaults between cpp/python interface try smart pointers
