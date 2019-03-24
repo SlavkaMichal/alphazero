@@ -144,13 +144,15 @@ Cmcts::simulate(int n)
 void
 Cmcts::worker(int n)
 {
+	torch::NoGradGuard guard;
 	std::shared_ptr<torch::jit::script::Module> module = nullptr;
-	if (param_name.empty()){
-#ifndef HEUR
-		throw std::runtime_error("No module name set");
-#else
+	if (!param_name.empty()){
 		module = torch::jit::load(param_name.c_str());
 		assert(module != nullptr);
+	}
+	else{
+#ifndef HEUR
+		throw std::runtime_error("No module name set");
 #endif
 	}
 	State *search_state = new State(state);
@@ -317,13 +319,13 @@ Cmcts::get_prob()
 	   they are skiped in select phase so visit count should be zero
 	 */
 	std::array<int, SIZE>* counts = root_node->counts();
-	int sum = root_node->nodeN;
+	float sum = root_node->nodeN;
 	//auto v = new std::vector<float>(counts->begin(), counts->end());
 	auto b = py::array_t<float>(counts->size());
 	py::buffer_info buff = b.request();
 	float *ptr = (float*)buff.ptr;
 	for (int i = 0; i < counts->size(); i++)
-		ptr[i] = counts->at(i);
+		ptr[i] = counts->at(i)/sum;
 	return b;
 }
 

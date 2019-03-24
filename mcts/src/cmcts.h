@@ -21,6 +21,7 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include <torch/script.h>
+#include <torch/csrc/api/include/torch/utils.h>
 #include <thread>
 
 struct Cmcts{
