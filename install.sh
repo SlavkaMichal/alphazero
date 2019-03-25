@@ -107,7 +107,7 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 			exit
 		fi
 	fi
-	$PYTHON -m pip install --update dist/*.whl
+	$PYTHON -m pip install --user --upgrade dist/*.whl
 	ret=$?
 	if [ $ret != 0 ]; then
 		echo $out
