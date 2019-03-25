@@ -81,7 +81,7 @@ State::make_move(int action)
 {
 	float end = 0;
 	if (!is_valid(action))
-		throw std::runtime_error("Invalid move "+std::to_string(action)+" out of bound (range is 0-"+std::to_string(SHAPE)+")!");
+		throw std::runtime_error("Invalid move "+std::to_string(action)+"\n "+repr()+"!");
 
 	board[player*SIZE + action] = 1;
 	player = player ? 0 : 1;
