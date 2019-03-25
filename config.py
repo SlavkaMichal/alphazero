@@ -14,26 +14,18 @@ PARAM_PATH = "{}/model".format(os.path.dirname(os.path.realpath(__file__)))
 # path to data
 DATA_PATH = "{}/data".format(os.path.dirname(os.path.realpath(__file__)))
 
+# path to logs
+LOG_PATH = "{}/logs".format(os.path.dirname(os.path.realpath(__file__)))
+
 # file containing path to best parameters
 PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__)))
 
 ##############################################################################
-#                                     mcts                                   #
+#                                 sefl-play                                  #
 ##############################################################################
-# number of simulations performed by MCTS
-SIMS = 800
-
 # how many training examples should be generated
 # optimally tens of thousands
-TRAIN_SAMPLES = 8000
-
-# parameter influencing generating of dirichlet noise
-# x = avg_game_length = SHAPE*2
-# alpha = 10/((SIZE*x-(x**2+x)*0.5)/x)
-ALPHA = 0.1
-
-# c constant in PUCT algorithm
-CPUCT = 4.
+TRAIN_SAMPLES = 10000
 
 ##############################################################################
 #                                    training                                #
@@ -52,6 +44,27 @@ BATCH_SIZE = 16
 # size of window is increasing by one every n generations
 # (starting window, max window, n)
 WINDOW = (4,20,2)
+
+##############################################################################
+#                                 evaluation                                 #
+##############################################################################
+# number of games run for evaluation
+EVAL_GAMES = 50
+
+##############################################################################
+#                                    mcts                                    #
+##############################################################################
+# number of simulations performed by MCTS
+SIMS = 1000
+
+# parameter influencing generating of dirichlet noise
+# x = avg_game_length = SHAPE*2
+# default alpha = 10/((SIZE*x-(x**2+x)*0.5)/x)
+# currently using default everywhere
+#ALPHA = 0.1
+
+# c constant in PUCT algorithm
+CPUCT = 4.
 
 ##############################################################################
 #     IF YOU CHANGE ANY OF THE VARIABLES BELLOW YOU MUST RUN ./install.sh    #
@@ -80,7 +93,7 @@ PYVERSION  = True if sys.version_info[0] >= 3 and sys.version_info[1] > 4 else F
 
 # version
 MAJOR = 0
-MINOR = 4
+MINOR = 5
 
 # dimensions of board
 SHAPE = 13
