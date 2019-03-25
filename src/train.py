@@ -1,81 +1,73 @@
 import sys
 sys.path.append('..')
 from config import *
-import site
-site.addsitedir(LOCAL_SITE_PATH)
-from model import simplerNN
+from importlib import import_module
+model_module = import_module(MODEL_MODULE)
 import cmcts
+import pdb
 import os
 import glob
 import torch
+import logging
 import numpy as np
 from datetime import datetime
 import tools
 
-def train(model_class):
-    model_name = "{}{}".format(model_class.__name__,SHAPE)
-    # read info
-    iteration, last_generation, train_generation = tools.info_read()
+def train(model_class, param_file, new_param_file, data_files):
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+            filename="{}/train_{}.log".format(LOG_PATH, os.path.basename(new_param_file).replace(".pyt",'')),
+            level=logging.DEBUG)
+    logging.info("########################################")
 
-    logging.basicConfig(format='%(levelname)s: %(message)s', filename="../logs/train{:03}.log".format(new_generation), level=logging.DEBUG)
-    logging.info("Using generation {} for training".format(train_generation))
-    logging.info("Next generation is {}".format(last_generation+1))
-
-    # model name:
-    #   [class name of model][board size]_[generation]
-    if last_generation == -1:
-        logging.info("No model parameters to train")
-        return
-    if train_generation == -1:
-        logging.info("Using last generation for training")
-        tools.info_best(last_generation)
-        train_generation = last_generation
-
-
-    # parameters name:
-    #   [class name of model][board size]_[generation].pt
+    logging.info("Using model {} for training".format(param_file))
+    logging.info("New model is {}".format(new_param_file))
 
     model = model_class()
 
-    param_file = "../model/{}_{:03}.pt".format(model_name, train_generation)
-    logging.info("Loading model parameters from {}".format(param_file))
+    if not os.path.isfile(param_file):
+        logging.error("File \"{}\" does not exists".format(param_file))
+        return False
+
     params = torch.load(param_file)
     model.load_state_dict(params['state_dict'])
-    #filename = "%s%d_%03d"%(model_class.__name__, SIZE, iteration)
-
-    files = glob.glob("../data/{}_*".format(model_name))
-    if len(files) == 0:
-        logging.info("No training files in data folder")
-        logging.info("Number of iterations expected: {}".format(iteration+1))
-        return
 
     # get window
-    files.sort()
-    size = min(WINDOW[0]+last_generation//WINDOW[1],WINDOW[3])
-    logging.info("Window size: {}".format(size))
-    files = files[-size:]
+    logging.info("Training files:")
+    if len(data_files) == 0:
+        logging.error("No data files provided")
+        return False
 
-    data_list = [ np.load(f) for f in files ]
+    for d in data_files:
+        logging.info("\t{}".format(d))
+
+    data_list = [ tools.get_unique(np.load(d)) for d in data_files ]
+    #data_list = [ tools.get_rotations(tools.get_unique(np.load(d))) for d in data_files ]
 
     data = np.concatenate(data_list)
-    np.random.shuffle(data)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-#    batch_input = np.empty((BATCH_SIZE, 2, SIZE, SIZE), dtype='f4')
+    del data_list
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
     criterion_pi = torch.nn.BCEWithLogitsLoss()
     criterion_v  = torch.nn.MSELoss()
 
     #show progress 100 times per epoch
-    view_step = data.size//BATCH_SIZE
+    view_step = data.size//BATCH_SIZE//10
+    logging.info("Data size {} divided into {} batches of size {}".format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
 
     for e in range(EPOCHS):
+        np.random.shuffle(data)
+        logging.info("Running epoch {}/{}".format(e,EPOCHS))
         acc_vloss = 0
         acc_ploss = 0
+        acc_loss  = 0
         for i in range(data.size//BATCH_SIZE):
             #batch_ids = np.random.choice(data.size, BATCH_SIZE)
-            batch_input = torch.from_numpy(data[i:i*BATCH_SIZE]['board'])
-            batch_vlabels = torch.from_numpy(data[i:i*BATCH_SIZE]['r']).reshape(-1,1)
-            batch_plabels = torch.from_numpy(data[i:i*BATCH_SIZE]['pi'])
+            batch_input   = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['board'])
+            batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1,1)
+            batch_plabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['pi'])
+            #pdb.set_trace()
 
             v, pi = model(batch_input)
 
@@ -85,24 +77,27 @@ def train(model_class):
 
             acc_vloss += vloss
             acc_ploss += ploss
+            acc_loss  += loss
 
-             show progress
             if i % view_step == view_step -1:
-                print("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}".
-                        format(e,i,acc_vloss/i,acc_ploss/i))
+                logging.info("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}\nTotal loss:{}".
+                        format(e,i,acc_vloss/i,acc_ploss/i,acc_loss/i))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        logging.info("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}".
-           format(e,i,acc_vloss/i,acc_ploss/i))
-
-    new_generation = tools.info_generation()
+    logging.info("Saving model to {}".format(new_param_file))
     torch.save({
         'state_dict' : model.state_dict(),
-        'iteration'  : iteration
-        },"{}_{:03d}.pt".format(model_name,new_generation))
+        },new_param_file)
+    logging.info("####################END#################")
+    return True
 
 if __name__ == "__main__":
-    train(small_nn)
+    param_file, new_param_file, data_files = tools.info_train()
+    model_class = getattr(model_module, MODEL_CLASS)
+    if train(model_class, param_file, new_param_file, data_files):
+        print("New model parameters were saved to {}".format(new_param_file))
+    else:
+        print("Training failed, check for errors {}/train_{}.log".format(LOG_PATH, new_param_file))

@@ -1,10 +1,10 @@
 import sys
 sys.path.append('..')
 from config import *
-import site
-site.addsitedir(LOCAL_SITE_PATH)
-from model import simplerNN
+from importlib import import_module
+model_module = import_module(MODEL_MODULE)
 import cmcts
+import pdb
 import glob
 import os
 import numpy as np
@@ -14,92 +14,60 @@ from tools import rand_uint32
 import tools
 from datetime import datetime
 
-def self_play_iteration(model_class):
-    """
-        model name:
-          [class name of model][board size]_[generation]
-        parameters name:
-          [class name of model][board size]_[generation].pt
-        datafile name:
-          [class name of model][board size]_[iteration]_[generation].npy
-    """
-    model_name = "{}{}".format(model_class.__name__,SHAPE)
-    # read info
-    iteration, generation, best = tools.info_read()
-    iteration = iteration + 1
-
-    logging.basicConfig(format='%(levelname)s: %(message)s', filename="../logs/self-play{:03d}.log".format(iteration), level=logging.DEBUG)
-    logging.info("Iteration number {}".format(iteration))
-    logging.info("Model generation: {}".format(best))
+def self_play_iteration(model_class, param_file=None, data_file=None):
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+            filename="{}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')),
+            level=logging.DEBUG)
+    logging.info("########################################")
 
     model = model_class()
 
-    if best == -1 and generation == -1:
-        # if there are no models save initialization parameters
-        # increment generation to 0 and save current model parameters
-        generation = tools.info_generation()
-        # set zero generation as the best
-        tools.info_best(generation)
-        param_file = "../model/{}_{:03d}.pt".format(model_name, generation)
-        logging.info("No model parameters set")
+    if os.path.isfile(param_file):
+        logging.info("Loading model parameters from {}".format(param_file))
+        params = torch.load(param_file)
+        model.load_state_dict(params['state_dict'])
+    else:
+        logging.info("No parameters provided")
         logging.info("Saving new model parameters to {}".format(param_file))
         torch.save({
             'state_dict' : model.state_dict(),
-            'model_name' : "{}_{}".format(model_name, generation),
-            'generation' : 0
             }, param_file)
-    else:
-        if best == -1:
-            best = generation
-        param_file = "../model/{}_{}.pt".format(model_name, best)
-        logging.info("Loading model parameters from {}".format(param_file))
-        if (not os.path.isfile(param_file)):
-            logging.info("No file with filename {} found".format(param_file))
-            logging.info("Saving new model parameters to {}".format(param_file))
-            torch.save({
-                'state_dict' : model.state_dict(),
-                'model_name' : "{}_{}".format(model_name, generation),
-                'generation' : 0
-                }, param_file)
-            tools.info_set(0, 0, 0)
-        else:
-            params = torch.load(param_file)
-            model.load_state_dict(prams['state_dict'])
 
-    logging.info("MCTS initialised with alpha {}, cpuct {}")
+    jit_model_name = "tmp_{}.pt".format(os.path.basename(param_file).replace(".pyt",''))
+    example = torch.rand(1,2,SHAPE,SHAPE)
 
     if CUDA:
-        example = torch.rand(1,2,SHAPE,SHAPE).cuda()
+        example.cuda()
         model.cuda()
-    else:
-        example = torch.rand(1,2,SHAPE,SHAPE)
 
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)
 
-    traced_script_module.save("{}.pt".format(model_name))
-    return
+    traced_script_module.save(jit_model_name)
 
+    logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
     mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
-    mcts0.set_predictor("{}.pt".format(model_name))
+    mcts0.set_alpha_default()
+    mcts0.set_params(jit_model_name)
+
     mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
-    mcts1.set_predictor("{}.pt".format(model_name))
-    if 'ALPHA' in globals():
-        mcts0.set_alpha(ALPHA)
-        mcts1.set_alpha(ALPHA)
-    else:
-        mcts0.set_alpha()
-        mcts1.set_alpha()
+    mcts1.set_alpha_default()
+    mcts1.set_params(jit_model_name)
 
     # dtype should be always dtype of input tensor
     data = []
 
     i = 0
+    logging.info("Generating {} training samples".format(TRAIN_SAMPLES))
+    start_gen = datetime.now()
+    logging.info("Starting at {}".format(start_gen))
     while len(data) < TRAIN_SAMPLES:
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
+        tools.make_init_moves(mcts0, mcts1)
+
         game_data = self_play_game(mcts0, mcts1)
-        logging.info("Game ended in {} moves".format(game_data))
+        logging.info("Game ended in {} moves".format(len(game_data)))
         logging.info("Game took {}".format(datetime.now()-start))
         data.extend(game_data)
         mcts0.clear()
@@ -108,14 +76,18 @@ def self_play_iteration(model_class):
         # TODO this only plays one game and it's taking fucking long
 
     npdata = np.stack(data)
-    np.random.shuffle(npdata)
-    data_file  = "../data/{}_{:03d}".format(model_name, iteration)
-    logging.info("Saving data to: {}".format(data_file))
-    tools.info_iteration()
-    np.save(data_file, npdata)
+    end = datetime.now()
+    logging.info("Finnished at {}".format(end))
+    logging.info("Total time {}".format(end-start_gen))
+    logging.info("Played {} games".format(i))
+    logging.info("Played in total {} ({} moves, {}s per game)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
 
-    os.remove("{}.pt".format(model_name))
-    return
+    logging.info("Saving data to: {}.npy".format(data_file))
+    np.save(data_file, npdata)
+    os.remove(jit_model_name)
+
+    logging.info("####################END#################")
+    return True
 
 def self_play_game(mcts0, mcts1):
     """ plays one game
@@ -136,14 +108,18 @@ def self_play_game(mcts0, mcts1):
     data0 = []
     data1 = []
 
-    dt = np.dtype([('board', 'f4', (2,SHAPE,SHAPE)), ('pi', 'f4', (SIZE,)), ('r', np.int64)])
+    dt = np.dtype([('board', 'f4', (2,SHAPE,SHAPE)), ('pi', 'f4', (SIZE,)), ('r', 'f4')])
 
-    for i in range(SIZE//2):
+    for i in range(SIZE):
         mcts0.simulate(SIMS)
         pi = mcts0.get_prob()
         board = mcts0.get_board()
         data0.append(np.array((board, pi, -1), dtype=dt))
         move = np.random.choice(pi.size, p=pi)
+        #logging.info("Player {}".format(mcts0.player))
+        #logging.info("Move {}".format(move))
+        #logging.info("Board {}".format(tools.repr_board(board)))
+        #logging.info("Pi {}".format(tools.repr_pi(pi)))
         mcts0.make_move(move)
         mcts1.make_move(move)
 
@@ -155,6 +131,10 @@ def self_play_game(mcts0, mcts1):
         board = mcts1.get_board()
         data1.append(np.array((board, pi, -1), dtype=dt))
         move = np.random.choice(pi.size, p=pi)
+        #logging.info("Player {}".format(mcts0.player))
+        #logging.info("Move {}".format(move))
+        #logging.info("Board {}".format(tools.repr_board(board)))
+        #logging.info("Pi {}".format(tools.repr_pi(pi)))
         mcts0.make_move(move)
         mcts1.make_move(move)
 
@@ -166,14 +146,23 @@ def self_play_game(mcts0, mcts1):
     data = np.stack(data0)
     data_view = np.array_split(data,[length])
 
-    if mcts0.winner == 0:
-        data_view[0]['r'] = 1
-    elif mcts0.winner == 0:
-        data_view[1]['r'] = 1
+    logging.info("Winner is {}".format(mcts0.winner))
+    if mcts0.winner == 0.:
+        data_view[0]['r'] = 1.
+    elif mcts0.winner == 1.:
+        data_view[1]['r'] = 1.
     else:
         # draw
         data['r'] = 1e-3
 
+    #data = []
+    #for i in range(len(data1)):
+    #    data.append(data0[i])
+    #    data.append(data1[i])
+    #if len(data0) > len(data1):
+    #    data.append(data0[-1])
+
+    #data = np.stack(data)
     return data
 
 def model_wraper(board, model):
@@ -185,5 +174,13 @@ def model_wraper(board, model):
 
 
 if __name__ == "__main__":
-    self_play_iteration(simplerNN)
-    pass
+    param_file, data_file = tools.info_generate()
+    model_class = getattr(model_module, MODEL_CLASS)
+    if self_play_iteration(model_class, param_file, data_file):
+        print("Data were saved to file {}".format(data_file))
+    else:
+        print("Generating data failed, check for errors {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))
+
+
+
+

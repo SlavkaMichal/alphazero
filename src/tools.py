@@ -1,90 +1,184 @@
 import sys
 sys.path.append('..')
-from config import SHAPE, SIZE, LOCAL_SITE_PATH, TRAIN_SAMPLES
-import site
-site.addsitedir(LOCAL_SITE_PATH)
-from time import time
+from config import *
 import numpy as np
+import numba as nb
 import json
+from glob import glob
+import os
+from datetime import datetime
+
 info_file = "../.info"
+best_file = "../.best"
 
 def rand_uint32():
     return np.random.randint(np.iinfo(np.int32).max, dtype=np.uint32).item()
 
-def info_read():
-    # info will be a dictionary containig iteration, generation and best
-    # generation is list of generation
-    try:
-        with open(info_file, "r") as fp:
-            info = json.load(fp)
-            return info['iteration'], info['generation'], info['best']
-    except (IOError, ValueError):
-        with open(info_file, "w") as fp:
-            info = {
-                    'iteration' : -1,
-                    'generation' : -1,
-                    'best' : -1
-                    }
-            json.dump(info, fp)
-            return info['iteration'], info['generation'], info['best']
+def repr_board(board):
+    b = "\n"
+    for i in range(SHAPE):
+        for j in range(SHAPE):
+            if board[0,i,j] == 1:
+                b += 'x '
+            elif board[1,i,j] == 1:
+                b += 'o '
+            else:
+                b += '_ '
+        b += "\n"
+    return b
 
-def info_iteration():
-    with open(info_file, "r+") as fp:
+def repr_pi(pi):
+    p = "\n"
+    for i in range(SHAPE):
+        for j in range(SHAPE):
+            p += "{0:.3f} ".format(pi[i*SHAPE+j])
+        p += "\n"
+    return p
+
+def make_init_moves(mcts0, mcts1):
+    mcts0.make_move(85)
+    mcts1.make_move(85)
+
+    mcts0.make_move(98)
+    mcts1.make_move(98)
+
+    mcts0.make_move(86)
+    mcts1.make_move(86)
+
+    mcts0.make_move(84)
+    mcts1.make_move(84)
+
+    mcts0.make_move(112)
+    mcts1.make_move(112)
+
+    mcts0.make_move(70)
+    mcts1.make_move(70)
+    return
+
+def get_unique(data):
+    board, idc, inv, cnt = np.unique(data['board'], axis=0,
+            return_index=True,
+            return_inverse=True,
+            return_counts=True)
+    #dt = np.dtype([('board', 'f4', (2,SHAPE,SHAPE)), ('pi', 'f4', (SIZE,)), ('r', 'f4')])
+    dt = data.dtype
+    result = []
+    for i in range(idc.size):
+        if cnt[i] > 1:
+            r  = np.average(data['r'][np.where(inv == i)])
+            pi = np.average(data['pi'][np.where(inv == i)], axis=0)
+        else:
+            r  = data['r'][idc[i]]
+            pi = data['pi'][idc[i]]
+        result.append(np.array((board[i], pi, r), dtype=dt))
+
+    return np.stack(result)
+
+def get_rotations(data):
+    rotations = []
+    dt = data.dtype
+    shape = data['board'].shape[-1]
+
+    for d in data:
+        board = d['board']
+        pi = d['pi'].reshape(shape,shape)
+        r = d['r']
+
+        for r in range(7):
+            if r == 3:
+                board = np.flip(board, 1)
+                pi    = np.flip(pi, 0)
+            else:
+                board = np.rot90(board, axes=(1,2))
+                pi    = np.rot90(pi)
+
+            rotations.append(np.array((board, pi.reshape(-1), r), dtype=dt))
+
+    return np.concatenate([data, np.stack(rotations)])
+
+def info_train():
+    best = get_best()
+
+    if best is None:
+        best = get_latest()
+        if best is None:
+            raise RuntimeError("No model to train")
+        set_best(best)
+
+    new_param_file = "{}/{}{}_{}.pyt".format(
+            PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+    data_files = glob("{}/{}{}_*.npy".format(
+        DATA_PATH, MODEL_CLASS, SHAPE))
+
+    data_files.sort()
+    if len(data_files) > 4:
+        # magic, see config
+        window = min(WINDOW[0]+(len(data_files)-4)//WINDOW[2], WINDOW[1])
+        data_files = data_files[-window:]
+
+    data_files = [ os.path.realpath(df) for df in data_files ]
+
+    return best, new_param_file, data_files
+
+def info_generate():
+    """ returns best params and new data file name
+        must return valid values!!
+    """
+    best = get_best()
+
+    if best is None:
+        best = get_latest()
+    if best is None:
+        best = "{}/{}{}_{}.pyt".format(
+            PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+
+    file_name = "{}/{}{}_{}".format(
+            DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+
+    return best, file_name
+
+def info_eval():
+    best = get_best()
+    latest = get_latest()
+    if best == latest:
+        return None, latest
+    return best, latest
+
+def get_latest():
+    param_files = glob("{}/{}{}_*.pyt".format(
+        PARAM_PATH, MODEL_CLASS, SHAPE))
+    if len(param_files) == 0:
+        return None
+
+    if not os.path.isabs(param_files[-1]):
+        return "{}/{}".format(PARAM_PATH, param_files[-1])
+    return param_files[-1]
+
+
+def get_best():
+    with open(PARAM_BEST, "r+") as fp:
         try:
-            info = json.load(fp)
+            content = json.load(fp)
         except ValueError:
-            # creating info file
-            info = {
-                    'iteration' : -1,
-                    'generation' : -1,
-                    'best' : -1
-                    }
-        fp.seek(0)
-        fp.truncate()
-        info['iteration'] = info['iteration'] + 1
-        json.dump(info, fp)
+            path = get_latest()
+            if path is None:
+                return None
+            return path
 
-        return info['iteration']
+        if not os.path.isfile(content['path']):
+            raise RuntimeError("File {} does not exst".format(path))
+        return content['path']
 
-def info_generation():
-    with open(info_file, "r+") as fp:
-        info = json.load(fp)
-        info['generation'] = info['generation'] + 1
-        fp.seek(0)
-        fp.truncate()
-        json.dump(info, fp)
+def set_best(path):
+    with open(PARAM_BEST, "w") as fp:
+        if not os.path.isabs(path):
+            path = "{}/{}".format(PARAM_PATH, path)
+        if not os.path.isfile(path):
+            raise RuntimeError("File {} does not exst".format(path))
 
-        return info['generation']
+        path = os.path.normpath(path)
+        content = { "path" : path }
+        json.dump(content, fp)
 
-def info_best(best):
-    with open(info_file, "r+") as fp:
-        info = json.load(fp)
-        info['best'] = best
-        fp.seek(0)
-        fp.truncate()
-        json.dump(info, fp)
-
-        return info['best']
-
-def info_set(iteration=None, generation=None, best=None):
-    with open(info_file, "r+") as fp:
-        try:
-            info = json.load(fp)
-        except ValueError:
-            # creating info file
-            info = {
-                    'iteration' : -1,
-                    'generation' : -1,
-                    'best' : -1
-                    }
-        if iteration is not None:
-            info['iteration'] = iteration
-        if generation is not None:
-            info['generation'] = generation
-        if best is not None:
-            info['best'] = best
-
-        fp.seek(0)
-        fp.truncate()
-        json.dump(info, fp)
-
+def init_param_file():
+    open(PARAM_BEST, 'a').close

@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 import site
 from config import *
-site.addsitedir(LOCAL_SITE_PATH)
 import numpy as np
 import cmcts
 import argparse
