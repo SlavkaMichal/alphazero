@@ -39,8 +39,8 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("No parameters provided")
         return False
 
-    jit_model_best = "tmp{}_best.pt".format(os.path.basename(param_best).replace(".pyt",''))
-    jit_model_latest = "tmp{}_best.pt".format(os.path.basename(param_latest).replace(".pyt",''))
+    jit_model_best = "tmp_{}_best.pt".format(os.path.basename(param_best).replace(".pyt",''))
+    jit_model_latest = "tmp_{}_latest.pt".format(os.path.basename(param_latest).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
     model.load_state_dict(param_best_loaded['state_dict'])
@@ -93,7 +93,6 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
         tools.make_init_moves(mcts_best, mcts_latest)
-        print(mcts_best)
 
         eval_game(mcts_best, mcts_latest)
         logging.info("Winner is {}".format(mcts_best.winner))
@@ -106,7 +105,6 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("Game took {}".format(datetime.now()-start))
         logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
 
-        print(mcts_best)
         mcts_best.clear()
         mcts_latest.clear()
 
@@ -124,7 +122,6 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
         tools.make_init_moves(mcts_best, mcts_latest)
-        print(mcts_best)
 
         # here is the difference from previous loop
         eval_game(mcts_latest, mcts_best)
@@ -138,7 +135,6 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("Game took {}".format(datetime.now()-start))
         logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
 
-        print(mcts_best)
         mcts_best.clear()
         mcts_latest.clear()
 
@@ -147,6 +143,10 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     logging.info("\tBest wins:   {}".format(wins_best))
     logging.info("\tLatest wins: {}".format(wins_latest))
     logging.info("\tDraws:       {}".format(draws))
+    print("Final result:")
+    print("\tBest wins:   {}".format(wins_best))
+    print("\tLatest wins: {}".format(wins_latest))
+    print("\tDraws:       {}".format(draws))
 
     logging.info("Latest win/loos ratio: {}".format(wins_latest/(wins_latest+wins_best)))
     if wins_latest/(wins_latest+wins_best) > 0.54:

@@ -163,6 +163,7 @@ def get_best():
             path = get_latest()
             if path is None:
                 return None
+            set_best(path)
             return path
 
         if not os.path.isfile(content['path']):

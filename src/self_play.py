@@ -146,7 +146,7 @@ def self_play_game(mcts0, mcts1):
     data = np.stack(data0)
     data_view = np.array_split(data,[length])
 
-    logging.info("Winner is {}".format(mcts0.winner))
+    logging.info(mcts0)
     if mcts0.winner == 0.:
         data_view[0]['r'] = 1.
     elif mcts0.winner == 1.:
@@ -165,19 +165,11 @@ def self_play_game(mcts0, mcts1):
     #data = np.stack(data)
     return data
 
-def model_wraper(board, model):
-    with torch.no_grad():
-        tboard = torch.as_tensor(board)
-        v, p = model(tboard.reshape(1,2,SHAPE,SHAPE))
-
-    return v[0].item(), p[0].numpy()
-
-
 if __name__ == "__main__":
     param_file, data_file = tools.info_generate()
     model_class = getattr(model_module, MODEL_CLASS)
     if self_play_iteration(model_class, param_file, data_file):
-        print("Data were saved to file {}".format(data_file))
+        print("Data were saved to file {}.npy".format(data_file))
     else:
         print("Generating data failed, check for errors {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))
 

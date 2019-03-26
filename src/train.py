@@ -40,7 +40,7 @@ def train(model_class, param_file, new_param_file, data_files):
     for d in data_files:
         logging.info("\t{}".format(d))
 
-    data_list = [ tools.get_unique(np.load(d)) for d in data_files ]
+    data_list = [ tools.get_rotations(tools.get_unique(np.load(d))) for d in data_files ]
     #data_list = [ tools.get_rotations(tools.get_unique(np.load(d))) for d in data_files ]
 
     data = np.concatenate(data_list)
@@ -52,7 +52,7 @@ def train(model_class, param_file, new_param_file, data_files):
     criterion_pi = torch.nn.BCEWithLogitsLoss()
     criterion_v  = torch.nn.MSELoss()
 
-    #show progress 100 times per epoch
+    # show progress 100 times per epoch
     view_step = data.size//BATCH_SIZE//10
     logging.info("Data size {} divided into {} batches of size {}".format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
 
