@@ -43,8 +43,15 @@ test config.py -nt mcts/.timestamp && echo "Removing build directory"
 if [ $INSTALL_PYBIND11 == "True" ]; then
 	echo "Installing pybind11"
 	out=$($PYTHON -m pip install --user pybind11)
-	if [ $DEBUG == "True" ]; then
+	pushd pybind11
+	mkdir build
+	cd build
+	cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX && \
+	make -j8 && make install
+	rc=$?
+	if [ $rc != 0 ]; then
 		echo $out
+		exit
 	fi
 fi
 
@@ -71,6 +78,9 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 	# typing is not required dependency for python > 3.4
 	sed -i '/typing/d' requirements.txt
 	out=$($PYTHON -m pip install --user -r requirements.txt)
+	if [ $DEBUG == "True" ]; then
+		echo $out
+	fi
 	if [ $CUDA == "False" ]; then
 		USE_OPENCV=1 \
 		BUILD_TORCH=ON \
@@ -80,9 +90,10 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		USE_NNPACK=0 \
 		CC=cc \
 		CXX=c++ \
-		$PYTHON setup.py bdist_wheel
-		ret=$?
-		if [ $ret != 0 ]; then
+		$PYTHON setup.py bdist_wheel && \
+		$PYTHON -m pip install --user --upgrade dist/*.whl
+		$rc=$?
+		if [ $rc != 0 ]; then
 			exit
 		fi
 	else
@@ -101,23 +112,15 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		USE_NNPACK=0 \
 		CC=cc \
 		CXX=c++ \
-		$PYTHON setup.py bdist_wheel
-		ret=$?
-		if [ $ret != 0 ]; then
+		$PYTHON setup.py bdist_wheel && \
+		$PYTHON -m pip install --user --upgrade dist/*.whl
+		$rc=$?
+		if [ $rc != 0 ]; then
 			exit
 		fi
 	fi
-	$PYTHON -m pip install --user --upgrade dist/*.whl
-	ret=$?
-	if [ $ret != 0 ]; then
-		echo $out
-		exit
-	fi
 
-	if [ $DEBUG == "True" ]; then
-		echo $out
-	fi
-	popd > /dev/null
+	popd
 fi
 
 pushd mcts > /dev/null
