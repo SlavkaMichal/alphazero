@@ -186,7 +186,11 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
 	   0 ak hra pokracuje
 	   */
-	int cnt = 0;
+	/* Stats
+	int end_state = 0;
+	int loops = 0;
+	int expansion = 0;
+	*/
 	while (1){
 		if (current->nodeN == -1){
 			/* node expansion */
@@ -256,6 +260,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			   but I don't have to create new node with end state */
 			/* player on move is the one who lost */
 			/* last node on stack is previous and that one also lost */
+			end_state += 1;
 			if (state->winner == 0 || state->winner == 1)
 				value = 1.;
 			else
