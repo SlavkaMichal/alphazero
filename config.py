@@ -32,10 +32,10 @@ TRAIN_SAMPLES = 10000
 ##############################################################################
 
 # number of epochs
-EPOCHS = 2
+EPOCHS = 3
 
 # training learning rate
-LR = 0.001
+LR = 0.1
 
 # batch size
 BATCH_SIZE = 16
