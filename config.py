@@ -77,7 +77,7 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-PREFIX = "{}/.local".format(os.environ["HOME"])
+PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 # test if pytorch is available
 INSTALL_PYTORCH = False
