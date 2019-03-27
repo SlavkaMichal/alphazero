@@ -25,7 +25,7 @@ PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__))
 ##############################################################################
 # how many training examples should be generated
 # optimally tens of thousands
-TRAIN_SAMPLES = 10000
+TRAIN_SAMPLES = 1
 
 ##############################################################################
 #                                    training                                #
@@ -71,7 +71,7 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-PREFIX = "{}/.local".format(os.environ["HOME"])
+PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 # test if pytorch is available
 INSTALL_PYTORCH = False
