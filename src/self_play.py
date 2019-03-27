@@ -45,7 +45,6 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)
 
-    print("Saving tmp file to {}".format(jit_model_name))
     traced_script_module.save(jit_model_name)
 
     logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))

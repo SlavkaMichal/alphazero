@@ -39,8 +39,8 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("No parameters provided")
         return False
 
-    jit_model_best = "tmp_{}_best.pt".format(os.path.basename(param_best).replace(".pyt",''))
-    jit_model_latest = "tmp_{}_latest.pt".format(os.path.basename(param_latest).replace(".pyt",''))
+    jit_model_best = "{}/tmp_{}_best.pt".format(os.path.dirname(os.path.realpath(__file__)),os.path.basename(param_best).replace(".pyt",''))
+    jit_model_latest = "{}/tmp_{}_latest.pt".format(os.path.dirname(os.path.realpath(__file__)),os.path.basename(param_latest).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
     model.load_state_dict(param_best_loaded['state_dict'])
