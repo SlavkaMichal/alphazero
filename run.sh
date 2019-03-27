@@ -1,5 +1,5 @@
+#!/bin/bash
 cd "$(dirname "${BASH_SOURCE[0]}")"
-source env.sh
 
 HELP="Usage: bash $0 ACTION [--python=[PYTHON INTERPRETER]\n\n
   -s, --self-play\tgenerate data with self play\n
@@ -12,6 +12,7 @@ HELP="Usage: bash $0 ACTION [--python=[PYTHON INTERPRETER]\n\n
 
 PYTHON=$(which python)
 ACTION="n"
+
 while [[ $# -gt 0 ]]
 do
 	key="$1"
@@ -40,6 +41,8 @@ do
 	*)
 esac
 done
+
+source env.sh $PYTHON
 
 if [ $ACTION == "n" ]; then
 	echo -e "Error: No action giveni\n"

@@ -28,7 +28,7 @@ PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__))
 TRAIN_SAMPLES = 10000000
 
 # max generating time
-TIMEOUT_SELF_PLAY = 10
+TIMEOUT_SELF_PLAY = 1
 
 ##############################################################################
 #                                 evaluation                                 #
