@@ -158,6 +158,7 @@ def get_latest():
 
 def get_best():
     with open(PARAM_BEST, "r+") as fp:
+        return get_latest()
         try:
             content = json.load(fp)
         except ValueError:
