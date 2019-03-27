@@ -19,14 +19,13 @@ ENDIF(CUDA)
 
 set( CMAKE_VERBOSE_MAKEFILE on )
 
-set(PYBIND11_CPP_STANDARD -std=c++14)
+#set(PYBIND11_CPP_STANDARD -std=c++14)
 
-find_package(GSL REQUIRED)
 find_package(Threads REQUIRED)
-set(CMAKE_PREFIX_PATH ~/.local)
+set(CMAKE_PREFIX_PATH ${PREFIX})
 find_package(pybind11 REQUIRED)
-set(CMAKE_PREFIX_PATH ~/.local/lib/python3.7/site-packages/torch)
-set(CMAKE_PREFIX_PATH ~/.local/lib/python3.7/site-packages/torch)
+find_package(GSL REQUIRED)
+set(CMAKE_PREFIX_PATH ${LOCAL_SITE_PATH}/torch)
 find_package(Torch REQUIRED)
 
 add_compile_definitions(SIZE=${SIZE} SHAPE=${SHAPE} MAJOR=${MAJOR} MINOR=${MINOR})

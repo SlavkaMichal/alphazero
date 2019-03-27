@@ -22,12 +22,8 @@ accordingly
 
 
 ## TODO:
-* automacally find `cmake_prefix_path` for pybind11 and pytorch
-* script for removing duplicated data and adding rotations of board
 * create evaluation thread
 * check if cuda works
-* remove debugging output
-* clean up define (not working without HEUR)
 * cache (maybe sometime)
 
 ## Notes:

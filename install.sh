@@ -22,6 +22,7 @@ else
 fi
 SITE=$($PYTHON -c 'import config; print(config.LOCAL_SITE_PATH)')
 INSTALL_PYTORCH=$($PYTHON -c 'import config; print(config.INSTALL_PYTORCH)')
+PARAM_BEST=$($PYTHON -c 'import config; print(config.PARAM_BEST)')
 INSTALL_PYBIND11=$($PYTHON -c 'import config; print(config.INSTALL_PYBIND11)')
 PREFIX=$($PYTHON -c 'import config; print(config.PREFIX)')
 DEBUG=$($PYTHON -c 'import config; print(config.DEBUG)')
@@ -151,4 +152,9 @@ fi
 if [ ! -d "logs" ]; then
 	echo "Creating logs directory"
 	mkdir "logs"
+fi
+
+if [ ! -d $PARAM_BEST ]; then
+	echo "Creating .param_best file"
+	$PYTHON -c 'import src.tools as t; t.init_param_file()'
 fi

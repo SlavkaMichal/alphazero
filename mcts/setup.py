@@ -37,6 +37,8 @@ class MCTSBuild(build_ext):
                 '-DSIZE={}' .format(SIZE),
                 '-DMAJOR={}'.format(MAJOR),
                 '-DMINOR={}'.format(MINOR),
+                '-DLOCAL_SITE_PATH={}'.format(LOCAL_SITE_PATH),
+                '-DPREFIX={}'.format(PREFIX),
                 ]
 
         if HEUR:
