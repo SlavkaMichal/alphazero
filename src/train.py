@@ -55,19 +55,22 @@ def train(model_class, param_file, new_param_file, data_files):
     # show progress 100 times per epoch
     view_step = data.size//BATCH_SIZE//10
     logging.info("Data size {} divided into {} batches of size {}".format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
+    start_train = datetime.now()
+    logging.info("Starting at {}".format(start_train))
 
     for e in range(EPOCHS):
+        start_epoch = datetime.now()
         np.random.shuffle(data)
         logging.info("Running epoch {}/{}".format(e,EPOCHS))
         acc_vloss = 0
         acc_ploss = 0
         acc_loss  = 0
+        acc_batchtime = None
         for i in range(data.size//BATCH_SIZE):
             #batch_ids = np.random.choice(data.size, BATCH_SIZE)
             batch_input   = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['board'])
             batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1,1)
             batch_plabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['pi'])
-            #pdb.set_trace()
 
             v, pi = model(batch_input)
 
@@ -75,18 +78,21 @@ def train(model_class, param_file, new_param_file, data_files):
             ploss = criterion_pi(pi, batch_plabels)
             loss = vloss + ploss
 
-            acc_vloss += vloss
-            acc_ploss += ploss
-            acc_loss  += loss
-
-            if i % view_step == view_step -1:
-                logging.info("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}\nTotal loss:{}".
-                        format(e,i,acc_vloss/i,acc_ploss/i,acc_loss/i))
+            acc_vloss += vloss.item()
+            acc_ploss += ploss.item()
+            acc_loss  += loss.item()
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if i % view_step == view_step -1:
+                logging.info("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}\nTotal loss:{}".
+                        format(e,i,acc_vloss/i,acc_ploss/i,acc_loss/i))
 
+        end = datetime.now()
+        logging.info("Epoch {} took {}".format(e, end-start_epoch))
+
+    logging.info("Training took {}".format(end-start_train))
     logging.info("Saving model to {}".format(new_param_file))
     torch.save({
         'state_dict' : model.state_dict(),

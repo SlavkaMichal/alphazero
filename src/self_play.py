@@ -19,6 +19,8 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
             filename="{}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')),
             level=logging.DEBUG)
     logging.info("########################################")
+    if DEBUG:
+        tools.self_play_config()
 
     model = model_class()
 
@@ -67,12 +69,16 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
         tools.make_init_moves(mcts0, mcts1)
 
         game_data = self_play_game(mcts0, mcts1)
-        logging.info("Game ended in {} moves".format(len(game_data)))
-        logging.info("Game took {}".format(datetime.now()-start))
         data.extend(game_data)
         mcts0.clear()
         mcts1.clear()
+        end = datetime.now()
+        logging.info("Game ended in {} moves".format(len(game_data)))
+        logging.info("Game took {}".format(end-start))
         i = i + 1
+        if end.minute - start_gen.minute >= TIMEOUT_SELF_PLAY:
+            logging.info("Timeout expired")
+            break
         # TODO this only plays one game and it's taking fucking long
 
     npdata = np.stack(data)
@@ -80,7 +86,7 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     logging.info("Finnished at {}".format(end))
     logging.info("Total time {}".format(end-start_gen))
     logging.info("Played {} games".format(i))
-    logging.info("Played in total {} ({} moves, {}s per game)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
+    logging.info("Played in total {} ({} moves, {}s per move)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
 
     logging.info("Saving data to: {}.npy".format(data_file))
     np.save(data_file, npdata)

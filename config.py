@@ -25,7 +25,19 @@ PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__))
 ##############################################################################
 # how many training examples should be generated
 # optimally tens of thousands
-TRAIN_SAMPLES = 10000
+TRAIN_SAMPLES = 10000000
+
+# max generating time
+TIMEOUT_SELF_PLAY = 10
+
+##############################################################################
+#                                 evaluation                                 #
+##############################################################################
+# number of games run for evaluation
+EVAL_GAMES = 50
+
+# max evaluation time in minutes
+TIMEOUT_EVAL = 10
 
 ##############################################################################
 #                                    training                                #
@@ -35,7 +47,7 @@ TRAIN_SAMPLES = 10000
 EPOCHS = 3
 
 # training learning rate
-LR = 0.1
+LR = 0.001
 
 # batch size
 BATCH_SIZE = 16
@@ -44,12 +56,6 @@ BATCH_SIZE = 16
 # size of window is increasing by one every n generations
 # (starting window, max window, n)
 WINDOW = (4,20,2)
-
-##############################################################################
-#                                 evaluation                                 #
-##############################################################################
-# number of games run for evaluation
-EVAL_GAMES = 50
 
 ##############################################################################
 #                                    mcts                                    #
@@ -111,7 +117,7 @@ CUDA = False
 HEUR = False
 
 # debug output
-DEBUG = False
+DEBUG = True
 
 # compile python extension
 EXTENSION = False

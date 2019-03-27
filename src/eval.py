@@ -84,70 +84,50 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     tools.make_init_moves(mcts_best, mcts_latest)
     first_player = mcts_best.player
     second_player = 0 if mcts_best.player == 1 else 1
-    logging.info("Current best player playing as {}".format(first_player))
-    logging.info("Latest model playing as {}".format(second_player))
+    logging.info("First player is {}".format(first_player))
     mcts_best.clear()
     mcts_latest.clear()
 
-    for i in range(EVAL_GAMES//2):
+    for i in range(EVAL_GAMES):
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
         tools.make_init_moves(mcts_best, mcts_latest)
 
-        eval_game(mcts_best, mcts_latest)
-        logging.info("Winner is {}".format(mcts_best.winner))
-        if mcts_best.winner == first_player:
-            wins_best += 1
-        elif mcts_best.winner == second_player:
-            wins_latest += 1
+        if i%2 == 0:
+            logging.info("First player is best")
+            eval_game(mcts_best, mcts_latest)
+            if mcts_best.winner == first_player:
+                wins_best += 1
+            elif mcts_best.winner == second_player:
+                wins_latest += 1
+            else:
+                draws += 1
         else:
-            draws += 1
-        logging.info("Game took {}".format(datetime.now()-start))
-        logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
+            eval_game(mcts_latest, mcts_best)
+            if mcts_best.winner == first_player:
+                wins_latest += 1
+            elif mcts_best.winner == second_player:
+                wins_best += 1
+            else:
+                draws += 1
 
+        end = datetime.now()
+        logging.info("Winner is {}".format(mcts_best.winner))
+        logging.info("Game took {}".format(end-start))
+        logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
         mcts_best.clear()
         mcts_latest.clear()
 
-    logging.info("First round of games:")
-    logging.info("\tBest wins:   {}".format(wins_best))
-    logging.info("\tLatest wins: {}".format(wins_latest))
-    logging.info("\tDraws:       {}".format(draws))
+        if end.minute - start_eval.minute >= TIMEOUT_EVAL:
+            logging.info("Timeout expired")
+            break
 
-    logging.info("Latest playing {} games as first player".format(EVAL_GAMES//2))
-    # swaping players
-    logging.info("Current best player playing as {}".format(first_player))
-    logging.info("Latest model playing as {}".format(second_player))
-
-    for i in range(EVAL_GAMES//2):
-        logging.info("Playing game: {}".format(i))
-        start = datetime.now()
-        tools.make_init_moves(mcts_best, mcts_latest)
-
-        # here is the difference from previous loop
-        eval_game(mcts_latest, mcts_best)
-        logging.info("Winner is {}".format(mcts_best.winner))
-        if mcts_best.winner == first_player:
-            wins_latest += 1
-        elif mcts_best.winner == second_player:
-            wins_best += 1
-        else:
-            draws += 1
-        logging.info("Game took {}".format(datetime.now()-start))
-        logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
-
-        mcts_best.clear()
-        mcts_latest.clear()
-
-    logging.info("Evaluation took {}".format(datetime.now()-start_eval))
-    logging.info("Final result:")
-    logging.info("\tBest wins:   {}".format(wins_best))
-    logging.info("\tLatest wins: {}".format(wins_latest))
-    logging.info("\tDraws:       {}".format(draws))
     print("Final result:")
     print("\tBest wins:   {}".format(wins_best))
     print("\tLatest wins: {}".format(wins_latest))
     print("\tDraws:       {}".format(draws))
 
+    logging.info("Total time {}".format(end-start_eval))
     logging.info("Latest win/loos ratio: {}".format(wins_latest/(wins_latest+wins_best)))
     if wins_latest/(wins_latest+wins_best) > 0.54:
         logging.info("Setting new best to {}".format(param_latest))

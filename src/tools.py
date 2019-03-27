@@ -2,11 +2,12 @@ import sys
 sys.path.append('..')
 from config import *
 import numpy as np
-import numba as nb
 import json
 from glob import glob
 import os
 from datetime import datetime
+import cmcts
+import torch
 
 info_file = "../.info"
 best_file = "../.best"
@@ -183,3 +184,35 @@ def set_best(path):
 
 def init_param_file():
     open(PARAM_BEST, 'a').close
+
+def self_play_config():
+    print("Number of training samples to generate: {}".format(TRAIN_SAMPLES))
+    print("Timeout for self play: {}m".format(TIMEOUT_SELF_PLAY))
+    print("Data destination: {}".format(DATA_PATH))
+    print("Parameters loaded from: {}".format(PARAM_PATH))
+    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
+    print("Torch from: {}".format(torch.__file__))
+    print("MCTS from: {}".format(cmcts.__file__))
+    print("MCTS number of threads: {}".format(THREADS))
+
+def train_config():
+    print("Data source: {}".format(DATA_PATH))
+    print("Parameters loaded from: {}".format(PARAM_PATH))
+    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
+    print("Torch from: {}".format(torch.__file__))
+    print("Learning rate: {}".format(LR))
+    print("Epochs: {}".format(EPOCHS))
+    print("Batch size: {}".format(BATCH_SIZE))
+    print("Starting window size: {}".format(WINDOW[0]))
+    print("Max window size: {}".format(WINDOW[1]))
+    print("Window size incremented every {} generation".format(WINDOW[2]))
+
+def eval_config():
+    print("Parameters loaded from: {}".format(PARAM_PATH))
+    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
+    print("Torch from: {}".format(torch.__file__))
+    print("MCTS from: {}".format(cmcts.__file__))
+    print("MCTS number of threads: {}".format(THREADS))
+    print("Number of games: {}".format(EVAL_GAMES))
+    print("Timeout: {}m".format(EVAL_GAMES))
+
