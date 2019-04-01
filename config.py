@@ -77,7 +77,7 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
 INSTALL_PYTORCH = False
@@ -99,7 +99,7 @@ PYVERSION  = True if sys.version_info[0] >= 3 and sys.version_info[1] > 4 else F
 
 # version
 MAJOR = 0
-MINOR = 5
+MINOR = 6
 
 # dimensions of board
 SHAPE = 13

@@ -47,8 +47,6 @@ class MCTSBuild(build_ext):
             cmake_args.append('-DEXT=ON')
         if DEBUG:
             cmake_args.append('-DDEBUG=ON')
-        if THREADS:
-            cmake_args.append('-DTHREADS={}'.format(THREADS))
         if CUDA:
             cmake_args.append('-DCUDA=ON')
 

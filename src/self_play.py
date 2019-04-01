@@ -50,10 +50,12 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
     mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts0.set_alpha_default()
+    mcts0.set_threads(THREADS)
     mcts0.set_params(jit_model_name)
 
     mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts1.set_alpha_default()
+    mcts1.set_threads(THREADS)
     mcts1.set_params(jit_model_name)
 
     # dtype should be always dtype of input tensor

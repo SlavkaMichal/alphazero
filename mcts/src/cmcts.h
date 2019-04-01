@@ -34,6 +34,7 @@ public:
 	void clear_params();
 	void simulate(int n);            // run n searches
 	void set_params(std::string &file_name);
+	void set_threads(int threads);
 	void set_seed(unsigned long int seed);
 	void set_alpha(double alpha);
 	void set_alpha_default();
@@ -42,6 +43,7 @@ public:
 	float get_winner();
 	int   get_player();
 	int   get_move_cnt();
+	int   get_threads();
 	py::array_t<float> get_prob();
 	py::array_t<float> get_board();
 	/* initialization function */
@@ -57,7 +59,6 @@ public:
 private:
 	void worker(int n);               // run one search starting from initial node
 	void search(State *state, std::shared_ptr<torch::jit::script::Module> module);               // run one search starting from initial node
-	//void board_move(int action);
 
 	Node   *root_node = nullptr; // game node
 	State  *state;
@@ -66,8 +67,7 @@ private:
 	double cpuct;
 	gsl_rng *r;
 	std::string param_name;
-	//std::function<py::tuple(py::array_t<float>, py::object)> predict;     // predict function
-	//py::object data;       // data passed to predict function
+	int threads;
 };
 
 #endif

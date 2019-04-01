@@ -125,11 +125,12 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 fi
 
 pushd mcts > /dev/null
-echo "Installing cmcts module"
+echo "Installing cmcts module to $PREFIX"
 out=$($PYTHON setup.py install --prefix $PREFIX)
 ret=$?
 if [ $ret != 0 ]; then
 	echo $out
+	echo "Installation failed"
 	exit
 fi
 if [ $DEBUG == "True" ]; then

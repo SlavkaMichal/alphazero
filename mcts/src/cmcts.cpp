@@ -3,7 +3,8 @@
 namespace py = pybind11;
 
 Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
-	cpuct(cpuct)
+	cpuct(cpuct),
+	threads(0)
 {
 	root_node = new Node();
 	state     = new State();
@@ -65,10 +66,23 @@ Cmcts::get_winner()
 	return state->winner;
 }
 
+int
+Cmcts::get_threads()
+{
+	return threads;
+}
+
 void
 Cmcts::set_cpuct(float cpuct)
 {
 	this->cpuct = cpuct;
+	return;
+}
+
+void
+Cmcts::set_threads(int threads)
+{
+	this->threads = threads;
 	return;
 }
 
@@ -114,30 +128,31 @@ Cmcts::simulate(int n)
 
 	// divide workload
 	py::gil_scoped_release release;
-#ifdef THREADS
-	int th_num = THREADS;
-	if (n < th_num){
-		th_num = n;
-		n = 1;
+	if (threads > 1){
+		int th_num = threads;
+		if (n < th_num){
+			th_num = n;
+			n = 1;
+		}
+		else if (n % th_num == 0)
+			n = n/th_num;
+		else
+			n = n/th_num + 1;
+
+		std::thread *threads = new std::thread[th_num];
+
+		for (int i = 0; i < th_num; i++){
+			threads[i] = std::thread(&Cmcts::worker, this, n);
+		}
+		for (int i = 0; i< th_num; i++){
+			threads[i].join();
+		}
+
+		delete[] threads;
 	}
-	else if (n % th_num == 0)
-		n = n/th_num;
 	else
-		n = n/th_num + 1;
+		worker(n);
 
-	std::thread *threads = new std::thread[th_num];
-
-	for (int i = 0; i < th_num; i++){
-		threads[i] = std::thread(&Cmcts::worker, this, n);
-	}
-	for (int i = 0; i< th_num; i++){
-		threads[i].join();
-	}
-
-	delete[] threads;
-#else
-	worker(n);
-#endif
 	return;
 }
 
@@ -260,7 +275,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			   but I don't have to create new node with end state */
 			/* player on move is the one who lost */
 			/* last node on stack is previous and that one also lost */
-			end_state += 1;
+			// end_state += 1;
 			if (state->winner == 0 || state->winner == 1)
 				value = 1.;
 			else

@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(cmcts)
+if (POLICY CMP0053)
+	cmake_policy(SET CMP0053 OLD)
+endif()
+
 OPTION(HEUR "Compile with heuristics" OFF)
 IF(HEUR)
 	add_definitions(-DHEUR)
@@ -19,15 +23,16 @@ ENDIF(CUDA)
 
 set( CMAKE_VERBOSE_MAKEFILE on )
 
-#set(PYBIND11_CPP_STANDARD -std=c++14)
+set(PYBIND11_CPP_STANDARD -std=c++14)
 
 find_package(Threads REQUIRED)
 set(CMAKE_PREFIX_PATH ${PREFIX})
 find_package(pybind11 REQUIRED)
 find_package(GSL REQUIRED)
-set(CMAKE_PREFIX_PATH ${LOCAL_SITE_PATH}/torch)
+set(CMAKE_PREFIX_PATH "${LOCAL_SITE_PATH}/torch")
 find_package(Torch REQUIRED)
 
+add_definitions(-fPIC)
 add_compile_definitions(SIZE=${SIZE} SHAPE=${SHAPE} MAJOR=${MAJOR} MINOR=${MINOR})
 SET(CMAKE_CXX_FLAGS "-g -fvisibility=hidden")
 

@@ -17,6 +17,7 @@ PYBIND11_MODULE(cmcts, m) {
 	.def("set_params", &Cmcts::set_params, "Passes to MCTS funtion to predict prior probability")
 	.def("set_seed", &Cmcts::set_seed, "Sets seed for rundom number generator")
 	.def("set_alpha", &Cmcts::set_alpha, "Sets alpha variable for generating dirichlet noise")
+	.def("set_threads", &Cmcts::set_threads, "Number of threads mcts runs in")
 	.def("set_alpha_default", &Cmcts::set_alpha_default, "Sets alpha variable for generating dirichlet noise")
 	.def("set_cpuct", &Cmcts::set_cpuct, "Sets cpuct used to compute UCB")
 	.def("clear", &Cmcts::clear, "Clears object state")
@@ -27,6 +28,7 @@ PYBIND11_MODULE(cmcts, m) {
 	.def_property_readonly("player", &Cmcts::get_player, "Player to move")
 	.def_property_readonly("winner", &Cmcts::get_winner, "Winner of the game")
 	.def_property_readonly("move_cnt", &Cmcts::get_move_cnt, "Number of played moves")
+	.def_property_readonly("threads", &Cmcts::get_threads, "Number of threads mcts runs in")
 	.def("print_node", &Cmcts::print_node)
 	.def("print_u", &Cmcts::print_u)
 #ifdef HEUR
