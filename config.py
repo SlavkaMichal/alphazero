@@ -108,7 +108,7 @@ SHAPE = 13
 SIZE = SHAPE*SHAPE
 
 # number of threads
-THREADS = 8
+THREADS = 4
 
 # cuda availability
 CUDA = False

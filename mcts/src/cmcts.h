@@ -26,30 +26,39 @@
 
 struct Cmcts{
 public:
+	Cmcts(uint64_t seed, double alpha, double cpuct);
+	~Cmcts(void);
+
 	void make_move(int action);      // change root_node by taking action
 	void make_movexy(int x, int y);
-	void print_node(std::vector<int> &v);
-	void print_u(std::vector<int> &v);
+
 	void clear(void);                // restore to initial node
 	void clear_params();
 	void simulate(int n);            // run n searches
-	void set_params(std::string &file_name);
-	void set_threads(int threads);
-	void set_seed(unsigned long int seed);
-	void set_alpha(double alpha);
-	void set_alpha_default();
-	void set_cpuct(float cpuct);
-	/* use of this function is depriciated use get_winner instead */
-	float get_winner();
-	int   get_player();
-	int   get_move_cnt();
-	int   get_threads();
+
+	/* getters and setters */
+	void              set_params(std::string &file_name);
+	const std::string get_params() const;
+	void              set_threads(int threads);
+	const int         get_threads() const;
+	void              set_alpha(double alpha);
+	const double      get_alpha() const;
+	void              set_player(int player);
+	const int         get_player() const;
+	void              set_cpuct(float cpuct);
+	const float       get_cpuct() const;
+	void              set_seed(unsigned long int seed);
+	void              set_alpha_default();
+	const float       get_winner() const;
+	const int         get_move_cnt() const;
+
 	py::array_t<float> get_prob();
 	py::array_t<float> get_board();
-	/* initialization function */
-	Cmcts(uint64_t seed, double alpha, double cpuct);
-	~Cmcts(void);
 	std::string repr();
+
+	/* for debugging purposes */
+	void print_node(std::vector<int> &v);
+	void print_u(std::vector<int> &v);
 
 #ifdef HEUR
 	py::array_t<float> get_heur();
@@ -62,12 +71,12 @@ private:
 
 	Node   *root_node = nullptr; // game node
 	State  *state;
-	double *alpha;
-	double *dir_noise;
-	double cpuct;
+	double *alpha;     // constant for generating dirichlet noise
+	double *dir_noise; // array alocated for dirichlet noise
+	double cpuct;      // constant affecting how much MCTS relies on neural network
 	gsl_rng *r;
-	std::string param_name;
-	int threads;
+	std::string param_name; // file from which parameters will be loaded
+	int threads;            // number of threads
 };
 
 #endif

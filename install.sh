@@ -29,10 +29,11 @@ DEBUG=$($PYTHON -c 'import config; print(config.DEBUG)')
 PYVERSION=$($PYTHON -c 'import config; print(config.PYVERSION)')
 #export PYTHONPATH="$PYTHONPATH:$(pwd)"
 
-
 echo "PYTHON: $PYTHON"
-echo "CUDA: $CUDA"
+echo "CUDA:   $CUDA"
 echo "PREFIX: $PREFIX"
+echo "SITE:   $SITE"
+
 if [ $PYVERSION == "False" ]; then
 	echo "Python version not high enough need 3.4 or more"
 	exit
@@ -43,7 +44,7 @@ test config.py -nt mcts/.timestamp && echo "Removing build directory"
 
 if [ $INSTALL_PYBIND11 == "True" ]; then
 	echo "Installing pybind11"
-	out=$($PYTHON -m pip install --user pybind11)
+	$PYTHON -m pip install --user pybind11
 	pushd pybind11
 	mkdir build
 	cd build
@@ -51,9 +52,11 @@ if [ $INSTALL_PYBIND11 == "True" ]; then
 	make -j8 && make install
 	rc=$?
 	if [ $rc != 0 ]; then
-		echo $out
+		echo "Installation failed"
 		exit
 	fi
+else
+	echo "Not installing pybind11"
 fi
 
 #pushd $PREFIX > /dev/null
@@ -74,14 +77,12 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 	echo "Installing pytorch with libtorch"
 	pushd pytorch > /dev/null
 	git checkout 916a670828bad914907f628e88e6c0ca6bb9b365
-	out=$(git submodule update --init --recursive)
-	out=$($PYTHON -m pip install --user pyyaml==3.13)
+	git submodule update --init --recursive
+	$PYTHON -m pip install --user pyyaml==3.13
 	# typing is not required dependency for python > 3.4
 	sed -i '/typing/d' requirements.txt
-	out=$($PYTHON -m pip install --user -r requirements.txt)
-	if [ $DEBUG == "True" ]; then
-		echo $out
-	fi
+	$PYTHON -m pip install --user -r requirements.txt
+
 	if [ $CUDA == "False" ]; then
 		USE_OPENCV=1 \
 		BUILD_TORCH=ON \
@@ -95,6 +96,7 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		$PYTHON -m pip install --user --upgrade dist/*.whl
 		$rc=$?
 		if [ $rc != 0 ]; then
+			echo "Installation failed"
 			exit
 		fi
 	else
@@ -117,24 +119,23 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		$PYTHON -m pip install --user --upgrade dist/*.whl
 		$rc=$?
 		if [ $rc != 0 ]; then
+			echo "Installation failed"
 			exit
 		fi
 	fi
 
 	popd
+else
+	echo "Not installing pytorch"
 fi
 
 pushd mcts > /dev/null
 echo "Installing cmcts module to $PREFIX"
-out=$($PYTHON setup.py install --prefix $PREFIX)
+$PYTHON setup.py install --prefix $PREFIX
 ret=$?
 if [ $ret != 0 ]; then
-	echo $out
 	echo "Installation failed"
 	exit
-fi
-if [ $DEBUG == "True" ]; then
-	echo $out
 fi
 popd > /dev/null
 touch mcts/.timestamp
@@ -159,3 +160,5 @@ if [ ! -d $PARAM_BEST ]; then
 	echo "Creating .param_best file"
 	$PYTHON -c 'import src.tools as t; t.init_param_file()'
 fi
+
+echo "Installation finnished successfully"

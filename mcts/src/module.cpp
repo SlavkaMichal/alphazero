@@ -14,6 +14,26 @@ PYBIND11_MODULE(cmcts, m) {
 	m.def("test", &test, "Documentation for function");
 	py::class_<Cmcts>(m, "mcts")
 	.def(py::init<int, double, double>(), "seed"_a=0, "alpha"_a=1, "cpuct"_a=1)
+	.def_property("params",
+			&Cmcts::get_params,
+			&Cmcts::set_params,
+			"Passes to MCTS funtion to predict prior probability")
+	.def_property("alpha",
+			&Cmcts::get_alpha,
+			&Cmcts::set_alpha,
+			"Sets alpha variable for generating dirichlet noise")
+	.def_property("threads",
+			&Cmcts::get_threads,
+			&Cmcts::set_threads,
+			"Number of threads mcts runs in")
+	.def_property("player",
+			&Cmcts::get_player,
+			&Cmcts::set_player,
+			"Player to move")
+	.def_property("cpuct",
+			&Cmcts::get_cpuct,
+			&Cmcts::set_cpuct,
+			"Sets cpuct used to compute UCB")
 	.def("set_params", &Cmcts::set_params, "Passes to MCTS funtion to predict prior probability")
 	.def("set_seed", &Cmcts::set_seed, "Sets seed for rundom number generator")
 	.def("set_alpha", &Cmcts::set_alpha, "Sets alpha variable for generating dirichlet noise")
@@ -25,10 +45,8 @@ PYBIND11_MODULE(cmcts, m) {
 	.def("simulate", &Cmcts::simulate, "Run n MCTS simulation")
 	.def("make_movexy", &Cmcts::make_movexy, "x"_a, "y"_a, "Make move by passing coordinates")
 	.def("make_move", &Cmcts::make_move, "Make move")
-	.def_property_readonly("player", &Cmcts::get_player, "Player to move")
 	.def_property_readonly("winner", &Cmcts::get_winner, "Winner of the game")
 	.def_property_readonly("move_cnt", &Cmcts::get_move_cnt, "Number of played moves")
-	.def_property_readonly("threads", &Cmcts::get_threads, "Number of threads mcts runs in")
 	.def("print_node", &Cmcts::print_node)
 	.def("print_u", &Cmcts::print_u)
 #ifdef HEUR

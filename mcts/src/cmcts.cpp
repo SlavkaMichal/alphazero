@@ -48,50 +48,25 @@ Cmcts::clear_params()
 	return;
 }
 
-int
-Cmcts::get_player()
-{
-	return state->player;
-}
+/* getters and setters */
+const int Cmcts::get_player() const { return state->player; }
+void      Cmcts::set_player(int player) { state->player = player; }
 
-int
-Cmcts::get_move_cnt()
-{
-	return state->move_cnt;
-}
+const float Cmcts::get_cpuct() const { return this->cpuct; }
+void        Cmcts::set_cpuct(float cpuct) { this->cpuct = cpuct; }
 
-float
-Cmcts::get_winner()
-{
-	return state->winner;
-}
+const int Cmcts::get_threads() const { return threads; }
+void      Cmcts::set_threads(int threads) { this->threads = threads; }
 
-int
-Cmcts::get_threads()
-{
-	return threads;
-}
+const double Cmcts::get_alpha() const       { return this->alpha[0]; }
+void         Cmcts::set_alpha(double alpha) { std::fill(this->alpha, this->alpha+SIZE, alpha); }
 
-void
-Cmcts::set_cpuct(float cpuct)
-{
-	this->cpuct = cpuct;
-	return;
-}
+const std::string Cmcts::get_params() const                 { return param_name; }
+void              Cmcts::set_params(std::string &file_name) { this->param_name = file_name; }
 
-void
-Cmcts::set_threads(int threads)
-{
-	this->threads = threads;
-	return;
-}
-
-void
-Cmcts::set_alpha(double alpha)
-{
-	std::fill(this->alpha, this->alpha+SIZE, alpha);
-	return;
-}
+void Cmcts::set_seed(unsigned long int seed) { gsl_rng_set(r, time(NULL)+seed); }
+const int Cmcts::get_move_cnt() const { return state->move_cnt; }
+const float Cmcts::get_winner() const { return state->winner; }
 
 void
 Cmcts::set_alpha_default()
@@ -99,20 +74,6 @@ Cmcts::set_alpha_default()
 	double len = SHAPE *2; // average game lenght estimate
 	double num = (SIZE*len - (len*len+len)*0.5)/len;
 	std::fill(alpha, alpha+SIZE, 10/num);
-}
-
-void
-Cmcts::set_params(std::string &file_name)
-{
-	param_name = file_name;
-	return;
-}
-
-void
-Cmcts::set_seed(unsigned long int seed)
-{
-	gsl_rng_set(r, time(NULL)+seed);
-	return;
 }
 
 void
@@ -150,8 +111,9 @@ Cmcts::simulate(int n)
 
 		delete[] threads;
 	}
-	else
+	else {
 		worker(n);
+	}
 
 	return;
 }

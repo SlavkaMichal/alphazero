@@ -29,7 +29,7 @@ find_package(Threads REQUIRED)
 set(CMAKE_PREFIX_PATH ${PREFIX})
 find_package(pybind11 REQUIRED)
 find_package(GSL REQUIRED)
-set(CMAKE_PREFIX_PATH "${LOCAL_SITE_PATH}/torch")
+set(CMAKE_PREFIX_PATH ${LOCAL_SITE_PATH}/torch)
 find_package(Torch REQUIRED)
 
 add_definitions(-fPIC)
