@@ -39,6 +39,7 @@ class MCTSBuild(build_ext):
                 '-DMINOR={}'.format(MINOR),
                 '-DLOCAL_SITE_PATH={}'.format(LOCAL_SITE_PATH),
                 '-DPREFIX={}'.format(PREFIX),
+                '-Wno-dev',
                 ]
 
         if HEUR:
