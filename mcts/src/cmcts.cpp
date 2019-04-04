@@ -124,7 +124,11 @@ Cmcts::worker(int n)
 	torch::NoGradGuard guard;
 	std::shared_ptr<torch::jit::script::Module> module = nullptr;
 	if (!param_name.empty()){
+#ifdef CUDA
+		module = torch::jit::load(param_name.c_str())->to(at::kCUDA);
+#else
 		module = torch::jit::load(param_name.c_str());
+#endif
 		assert(module != nullptr);
 	}
 	else{
@@ -134,9 +138,6 @@ Cmcts::worker(int n)
 	}
 	State *search_state = new State(state);
 
-#ifdef CUDA
-	module.to(at::kCUDA);
-#endif
 
 	for (int i = 0; i < n; i++){
 		search(search_state, module);
@@ -184,14 +185,14 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 						options);
 				tensor = tensor.toType(at::kFloat); // this will copy data
 #ifdef CUDA
-				tensor.to(torch::Device(torch::kCUDA));
+				tensor.to(at::kCUDA);
 				// cuda synchronize??
 #endif
 				input.push_back(tensor);
 				/* evaluate model */
 				auto output = module->forward(input).toTuple();
 #ifdef CUDA
-				output.to(torch::Device(torch::kCPU));
+				output.to(at::kCPU);
 #endif
 				value = -output->elements()[0].toTensor().item<float>();
 				current->set_prior(output->elements()[1].toTensor(), dir_noise);
@@ -208,13 +209,13 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 					options);
 			tensor = tensor.toType(at::kFloat); //this will make a copy
 #ifdef CUDA
-			tensor.to(torch::Device(torch::kCUDA));
+			tensor.to(at::kCUDA);
 #endif
 			input.push_back(tensor);
 			/* evaluate model */
 			auto output = module->forward(input).toTuple();
 #ifdef CUDA
-			output.to(torch::Device(torch::kCPU));
+			output.to(at::kCPU);
 #endif
 			value = -output->elements()[0].toTensor().item<float>();
 			current->set_prior(output->elements()[1].toTensor(), dir_noise);
