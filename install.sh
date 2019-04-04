@@ -1,8 +1,8 @@
-#!/usr/bin/bash
-source env.sh
+#!/bin/bash
 
 if [ "$#" -ge "1" ]; then
 	PYTHON=$1
+	source env.sh $PYTHON
 	CUDA=$($PYTHON -c 'import config; print(config.CUDA)')
 
 	if [ $CUDA == "True" ]; then
@@ -48,13 +48,14 @@ if [ $INSTALL_PYBIND11 == "True" ]; then
 	pushd pybind11
 	mkdir build
 	cd build
-	cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX && \
+	cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX .. && \
 	make -j8 && make install
 	rc=$?
 	if [ $rc != 0 ]; then
 		echo "Installation failed"
 		exit
 	fi
+	popd
 else
 	echo "Not installing pybind11"
 fi
@@ -94,7 +95,7 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		CXX=c++ \
 		$PYTHON setup.py bdist_wheel && \
 		$PYTHON -m pip install --user --upgrade dist/*.whl
-		$rc=$?
+		rc=$?
 		if [ $rc != 0 ]; then
 			echo "Installation failed"
 			exit
@@ -117,7 +118,7 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 		CXX=c++ \
 		$PYTHON setup.py bdist_wheel && \
 		$PYTHON -m pip install --user --upgrade dist/*.whl
-		$rc=$?
+		rc=$?
 		if [ $rc != 0 ]; then
 			echo "Installation failed"
 			exit
@@ -132,8 +133,8 @@ fi
 pushd mcts > /dev/null
 echo "Installing cmcts module to $PREFIX"
 $PYTHON setup.py install --prefix $PREFIX
-ret=$?
-if [ $ret != 0 ]; then
+rc=$?
+if [ $rc != 0 ]; then
 	echo "Installation failed"
 	exit
 fi
