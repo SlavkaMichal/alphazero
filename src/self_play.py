@@ -78,6 +78,7 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
         logging.info("Game ended in {} moves".format(len(game_data)))
         logging.info("Game took {}".format(end-start))
         i = i + 1
+        logging.info("Timeout {} >= {}".format(end.minute - start_gen.minute, TIMEOUT_SELF_PLAY))
         if end.minute - start_gen.minute >= TIMEOUT_SELF_PLAY:
             logging.info("Timeout expired")
             break

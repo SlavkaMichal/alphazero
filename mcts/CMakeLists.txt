@@ -17,9 +17,9 @@ IF(THREADS)
 	add_definitions(-DTHREADS=${THREADS})
 ENDIF(THREADS)
 OPTION(CUDA "Cuda capability" OFF)
-IF(CUDA)
-	add_definitions(-DCUDA)
-ENDIF(CUDA)
+IF(WITH_CUDA)
+	add_definitions(-DWITH_CUDA)
+ENDIF(WITH_CUDA)
 
 set( CMAKE_VERBOSE_MAKEFILE on )
 
@@ -33,7 +33,7 @@ set(CMAKE_PREFIX_PATH ${LOCAL_SITE_PATH}/torch)
 find_package(Torch REQUIRED)
 
 add_definitions(-fPIC)
-add_compile_definitions(SIZE=${SIZE} SHAPE=${SHAPE} MAJOR=${MAJOR} MINOR=${MINOR})
+add_definitions(-DSIZE=${SIZE} -DSHAPE=${SHAPE} -DMAJOR=${MAJOR} -DMINOR=${MINOR})
 SET(CMAKE_CXX_FLAGS "-g -fvisibility=hidden")
 
 

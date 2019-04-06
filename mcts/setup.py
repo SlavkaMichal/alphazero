@@ -49,7 +49,7 @@ class MCTSBuild(build_ext):
         if DEBUG:
             cmake_args.append('-DDEBUG=ON')
         if CUDA:
-            cmake_args.append('-DCUDA=ON')
+            cmake_args.append('-DWITH_CUDA=ON')
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),

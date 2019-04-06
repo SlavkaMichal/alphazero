@@ -28,7 +28,7 @@ PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__))
 TRAIN_SAMPLES = 10000000
 
 # max generating time
-TIMEOUT_SELF_PLAY = 1
+TIMEOUT_SELF_PLAY = 30
 
 ##############################################################################
 #                                 evaluation                                 #
@@ -77,7 +77,7 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-PREFIX = "{}/.local".format(os.environ['HOME'])
+PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 # test if pytorch is available
 INSTALL_PYTORCH = False
@@ -108,7 +108,7 @@ SHAPE = 13
 SIZE = SHAPE*SHAPE
 
 # number of threads
-THREADS = 4
+THREADS = 8
 
 # cuda availability
 CUDA = False

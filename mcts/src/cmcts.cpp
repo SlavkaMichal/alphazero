@@ -124,11 +124,7 @@ Cmcts::worker(int n)
 	torch::NoGradGuard guard;
 	std::shared_ptr<torch::jit::script::Module> module = nullptr;
 	if (!param_name.empty()){
-#ifdef CUDA
-		module = torch::jit::load(param_name.c_str())->to(at::kCUDA);
-#else
 		module = torch::jit::load(param_name.c_str());
-#endif
 		assert(module != nullptr);
 	}
 	else{
@@ -138,6 +134,9 @@ Cmcts::worker(int n)
 	}
 	State *search_state = new State(state);
 
+#ifdef WITH_CUDA
+	module->to(at::kCUDA);
+#endif
 
 	for (int i = 0; i < n; i++){
 		search(search_state, module);
@@ -184,18 +183,16 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 						at::IntList(sizes),
 						options);
 				tensor = tensor.toType(at::kFloat); // this will copy data
-#ifdef CUDA
+#ifdef WITH_CUDA
 				tensor.to(at::kCUDA);
 				// cuda synchronize??
 #endif
 				input.push_back(tensor);
 				/* evaluate model */
 				auto output = module->forward(input).toTuple();
-#ifdef CUDA
-				output.to(at::kCPU);
-#endif
-				value = -output->elements()[0].toTensor().item<float>();
-				current->set_prior(output->elements()[1].toTensor(), dir_noise);
+
+				value = -output->elements()[0].toTensor().to(at::kCPU).item<float>();
+				current->set_prior(output->elements()[1].toTensor().to(at::kCPU), dir_noise);
 			}else{
 				value = -rollout();
 				current->set_prior(state, dir_noise);
@@ -208,17 +205,15 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 					at::IntList(sizes),
 					options);
 			tensor = tensor.toType(at::kFloat); //this will make a copy
-#ifdef CUDA
+#ifdef WITH_CUDA
 			tensor.to(at::kCUDA);
 #endif
 			input.push_back(tensor);
 			/* evaluate model */
 			auto output = module->forward(input).toTuple();
-#ifdef CUDA
-			output.to(at::kCPU);
-#endif
-			value = -output->elements()[0].toTensor().item<float>();
-			current->set_prior(output->elements()[1].toTensor(), dir_noise);
+
+			value = -output->elements()[0].toTensor().to(at::kCPU).item<float>();
+			current->set_prior(output->elements()[1].toTensor().to(at::kCPU), dir_noise);
 #endif
 			break;
 		}

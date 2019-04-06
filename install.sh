@@ -29,7 +29,7 @@ DEBUG=$($PYTHON -c 'import config; print(config.DEBUG)')
 PYVERSION=$($PYTHON -c 'import config; print(config.PYVERSION)')
 #export PYTHONPATH="$PYTHONPATH:$(pwd)"
 
-echo "PYTHON: $PYTHON"
+echo "PYTHON: $(which $PYTHON)"
 echo "CUDA:   $CUDA"
 echo "PREFIX: $PREFIX"
 echo "SITE:   $SITE"
@@ -85,6 +85,8 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 	$PYTHON -m pip install --user -r requirements.txt
 
 	if [ $CUDA == "False" ]; then
+		echo "Building pytorch without cuda"
+		exit
 		USE_OPENCV=1 \
 		BUILD_TORCH=ON \
 		CMAKE_PREFIX_PATH="/usr/bin/" \
@@ -101,21 +103,21 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 			exit
 		fi
 	else
-		LD_LIBRARY_PATH=$CUDA_PATH/lib64:/usr/local/lib:$LD_LIBRARY_PATH \
+		echo "Building pytorch with cuda"
+		USE_OPENCV=1 \
+		BUILD_TORCH=ON \
+		CMAKE_PREFIX_PATH="/usr/bin/" \
+		LD_LIBRARY_PATH="$CUDA_PATH/lib64:/usr/local/lib:$LD_LIBRARY_PATH" \
 		CUDA_BIN_PATH=$CUDA_PATH/bin \
 		CUDA_TOOLKIT_ROOT_DIR=$CUDA_PATH \
 		CUDNN_LIB_DIR=$CUDA_PATH/lib64 \
 		CUDA_HOST_COMPILER=cc \
-		TORCH_CUDA_ARCH_LIST="3.5 5.2 6.0 6.1+PTX" \
-		TORCH_NVCC_FLAGS="-Xfatbin -compress-all" \
-		USE_OPENCV=1 \
-		BUILD_TORCH=ON \
-		CMAKE_PREFIX_PATH="/usr/bin/" \
-		LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH \
-		USE_CUDA=0 \
-		USE_NNPACK=0 \
+		USE_CUDA=1 \
+		USE_NNPACK=1 \
 		CC=cc \
 		CXX=c++ \
+		TORCH_CUDA_ARCH_LIST="3.5 5.2 6.0 6.1+PTX" \
+		TORCH_NVCC_FLAGS="-Xfatbin -compress-all" \
 		$PYTHON setup.py bdist_wheel && \
 		$PYTHON -m pip install --user --upgrade dist/*.whl
 		rc=$?
