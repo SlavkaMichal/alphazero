@@ -118,7 +118,8 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         mcts_best.clear()
         mcts_latest.clear()
 
-        if end.minute - start_eval.minute >= TIMEOUT_EVAL:
+        logging.info("Timeout {}s >= {}s".format((end - start_eval).seconds, 60*TIMEOUT_EVAL))
+        if (end - start_eval).seconds >= TIMEOUT_EVAL*60:
             logging.info("Timeout expired")
             break
 
