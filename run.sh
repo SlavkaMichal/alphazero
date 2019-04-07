@@ -12,6 +12,7 @@ HELP="Usage: bash $0 ACTION [--python=[PYTHON INTERPRETER]\n\n
 
 PYTHON=$(which python)
 ACTION="n"
+SEQUENCE="0"
 
 while [[ $# -gt 0 ]]
 do
@@ -33,6 +34,11 @@ do
 		ACTION="e"
 		shift
 		;;
+	-i|--sequence)
+		SEQUENCE="$2"
+		shift
+		shift
+		;;
 	-p|--python)
 		PYTHON="$2"
 		shift
@@ -42,6 +48,8 @@ do
 esac
 done
 
+echo "SEQUENCE=$SEQUENCE"
+export SEQUENCE
 source env.sh $PYTHON
 
 if [ $ACTION == "n" ]; then

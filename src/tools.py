@@ -127,14 +127,19 @@ def info_generate():
     """
     best = get_best()
 
+    if 'SEQUENCE' in os.environ:
+        seq = os.environ['SEQUENCE']
+    else:
+        seq = 0
+
     if best is None:
         best = get_latest()
     if best is None:
         best = "{}/{}{}_{}.pyt".format(
-            PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+                PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H:%M:%S"))
 
-    file_name = "{}/{}{}_{}".format(
-            DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+    file_name = "{}/{}{}_{}s{}".format(
+                DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H:%M:%S"), seq)
 
     return best, file_name
 
