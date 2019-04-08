@@ -91,6 +91,12 @@ def train(model_class, param_file, new_param_file, data_files):
 
         end = datetime.now()
         logging.info("Epoch {} took {}".format(e, end-start_epoch))
+        logging.info("value accuracy: {}\npi accuracy:{}\nTotal loss:{}".
+                        format(acc_vloss/i,acc_ploss/i,acc_loss/i))
+        logging.info("Checkpoint model {}".format(new_param_file))
+        torch.save({
+            'state_dict' : model.state_dict(),
+            },new_param_file)
 
     logging.info("Training took {}".format(end-start_train))
     logging.info("Saving model to {}".format(new_param_file))

@@ -8,6 +8,9 @@ import os
 MODEL_MODULE = "model"
 MODEL_CLASS = "simplerNN"
 
+# number of self-play tasks
+PROC_NUM = 12
+
 # path to neural network parameters
 PARAM_PATH = "{}/model".format(os.path.dirname(os.path.realpath(__file__)))
 
@@ -37,17 +40,17 @@ TIMEOUT_SELF_PLAY = 30
 EVAL_GAMES = 50
 
 # max evaluation time in minutes
-TIMEOUT_EVAL = 10
+TIMEOUT_EVAL = 100
 
 ##############################################################################
 #                                    training                                #
 ##############################################################################
 
 # number of epochs
-EPOCHS = 3
+EPOCHS = 4
 
 # training learning rate
-LR = 0.001
+LR = 0.005
 
 # batch size
 BATCH_SIZE = 16

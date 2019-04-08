@@ -18,9 +18,11 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     logging.basicConfig(format='%(levelname)s: %(message)s',
             filename="{}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')),
             level=logging.DEBUG)
+    print("Log saved to: {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))
     logging.info("########################################")
     if DEBUG:
-        tools.self_play_config()
+        print(tools.self_play_config())
+    logging.info(tools.self_play_config())
 
     model = model_class()
 
@@ -35,7 +37,10 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
             'state_dict' : model.state_dict(),
             }, param_file)
 
-    jit_model_name = "{}/tmp_{}.pt".format(os.path.dirname(os.path.realpath(__file__)),os.path.basename(param_file).replace(".pyt",''))
+    jit_model_name = "{}/tmp_{}{}.pt".format(
+            os.path.dirname(os.path.realpath(__file__)),
+            os.path.basename(data_file).replace("{MODEL_CLASS}_", ''),
+            os.path.basename(param_file).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
     if CUDA:
@@ -45,6 +50,7 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)
 
+    logging.info("Saving traced script to {}".format(jit_model_name))
     traced_script_module.save(jit_model_name)
 
     logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
@@ -78,6 +84,13 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
         logging.info("Game ended in {} moves".format(len(game_data)))
         logging.info("Game took {}".format(end-start))
         i = i + 1
+        if i%10  == 9:
+            logging.info("Creating checkpoint with {} games"format(i))
+            logging.info("Played in total {} ({} moves, {}s per move)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
+            npdata = np.stack(data)
+            np.save(data_file, npdata)
+            del npdata
+
         logging.info("Timeout {}s >= {}s".format((end - start_gen).seconds, 60*TIMEOUT_SELF_PLAY))
         if (end - start_gen).seconds >= TIMEOUT_SELF_PLAY * 60:
             logging.info("Timeout expired")
@@ -181,7 +194,3 @@ if __name__ == "__main__":
         print("Data were saved to file {}.npy".format(data_file))
     else:
         print("Generating data failed, check for errors {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))
-
-
-
-

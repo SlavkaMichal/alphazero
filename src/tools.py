@@ -107,15 +107,17 @@ def info_train():
         set_best(best)
 
     new_param_file = "{}/{}{}_{}.pyt".format(
-            PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H%M%S"))
+            PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
     data_files = glob("{}/{}{}_*.npy".format(
         DATA_PATH, MODEL_CLASS, SHAPE))
 
     data_files.sort()
-    if len(data_files) > 4:
-        # magic, see config
-        window = min(WINDOW[0]+(len(data_files)-4)//WINDOW[2], WINDOW[1])
-        data_files = data_files[-window:]
+    #window = min(WINDOW[0]+(len(data_files)-4)//WINDOW[2], WINDOW[1])
+    #window *= PROC_NUM
+    #if len(data_files) - window > 0:
+    #    for f in data_files[0:len(data_files) - window]:
+    #        logging.info("Removing file {}".format(f))
+    #        os.remove(f)
 
     data_files = [ os.path.realpath(df) for df in data_files ]
 
@@ -136,10 +138,10 @@ def info_generate():
         best = get_latest()
     if best is None:
         best = "{}/{}{}_{}.pyt".format(
-                PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H:%M:%S"))
+                PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
 
     file_name = "{}/{}{}_{}s{}".format(
-                DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H:%M:%S"), seq)
+                DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"), seq)
 
     return best, file_name
 
@@ -163,7 +165,6 @@ def get_latest():
 
 def get_best():
     with open(PARAM_BEST, "r+") as fp:
-        return get_latest()
         try:
             content = json.load(fp)
         except ValueError:
@@ -192,33 +193,40 @@ def init_param_file():
     open(PARAM_BEST, 'a').close
 
 def self_play_config():
-    print("Number of training samples to generate: {}".format(TRAIN_SAMPLES))
-    print("Timeout for self play: {}m".format(TIMEOUT_SELF_PLAY))
-    print("Data destination: {}".format(DATA_PATH))
-    print("Parameters loaded from: {}".format(PARAM_PATH))
-    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
-    print("Torch from: {}".format(torch.__file__))
-    print("MCTS from: {}".format(cmcts.__file__))
-    print("MCTS number of threads: {}".format(THREADS))
+    s = ""
+    s += "Number of training samples to generate: {}\n".format(TRAIN_SAMPLES)
+    s += "Timeout for self play: {} min\n".format(TIMEOUT_SELF_PLAY)
+    s += "Data destination: {}\n".format(DATA_PATH)
+    s += "Threads: {}\n".format(DATA_PATH)
+    s += "Parameters loaded from: {}\n".format(PARAM_PATH)
+    s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Torch from: {}\n".format(torch.__file__)
+    s += "MCTS from: {}\n".format(cmcts.__file__)
+    s += "MCTS number of threads: {}\n".format(THREADS)
+    return s
 
 def train_config():
-    print("Data source: {}".format(DATA_PATH))
-    print("Parameters loaded from: {}".format(PARAM_PATH))
-    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
-    print("Torch from: {}".format(torch.__file__))
-    print("Learning rate: {}".format(LR))
-    print("Epochs: {}".format(EPOCHS))
-    print("Batch size: {}".format(BATCH_SIZE))
-    print("Starting window size: {}".format(WINDOW[0]))
-    print("Max window size: {}".format(WINDOW[1]))
-    print("Window size incremented every {} generation".format(WINDOW[2]))
+    s = ""
+    s += "Data source: {}".format(DATA_PATH)
+    s += "Parameters loaded from: {}".format(PARAM_PATH)
+    s += "Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Torch from: {}".format(torch.__file__)
+    s += "Learning rate: {}".format(LR)
+    s += "Epochs: {}".format(EPOCHS)
+    s += "Batch size: {}".format(BATCH_SIZE)
+    s += "Starting window size: {}".format(WINDOW[0])
+    s += "Max window size: {}".format(WINDOW[1])
+    s += "Window size incremented every {} generation".format(WINDOW[2])
+    return s
 
 def eval_config():
-    print("Parameters loaded from: {}".format(PARAM_PATH))
-    print("Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS))
-    print("Torch from: {}".format(torch.__file__))
-    print("MCTS from: {}".format(cmcts.__file__))
-    print("MCTS number of threads: {}".format(THREADS))
-    print("Number of games: {}".format(EVAL_GAMES))
-    print("Timeout: {}m".format(EVAL_GAMES))
+    s = ""
+    s += "Parameters loaded from: {}".format(PARAM_PATH)
+    s += "Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Torch from: {}".format(torch.__file__)
+    s += "MCTS from: {}".format(cmcts.__file__)
+    s += "MCTS number of threads: {}".format(THREADS)
+    s += "Number of games: {}".format(EVAL_GAMES)
+    s += "Timeout: {}m".format(EVAL_GAMES)
+    return s
 

@@ -23,6 +23,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     logging.basicConfig(format='%(levelname)s: %(message)s',
             filename=log_file,
             level=logging.DEBUG)
+    print("Log saved to {}".format(log_file))
     logging.info("########################################")
 
     model = model_class()
@@ -39,8 +40,12 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         logging.info("No parameters provided")
         return False
 
-    jit_model_best = "{}/tmp_{}_best.pt".format(os.path.dirname(os.path.realpath(__file__)),os.path.basename(param_best).replace(".pyt",''))
-    jit_model_latest = "{}/tmp_{}_latest.pt".format(os.path.dirname(os.path.realpath(__file__)),os.path.basename(param_latest).replace(".pyt",''))
+    jit_model_best = "{}/tmp_{}_best.pt".format(
+            os.path.dirname(os.path.realpath(__file__)),
+            os.path.basename(param_best).replace(".pyt",''))
+    jit_model_latest = "{}/tmp_{}_latest.pt".format(
+            os.path.dirname(os.path.realpath(__file__)),
+            os.path.basename(param_latest).replace(".pyt",'').replace(":", ''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
     model.load_state_dict(param_best_loaded['state_dict'])
@@ -51,6 +56,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)
 
+    logging.info("Saving best model to {}".format(jit_model_best))
     traced_script_module.save(jit_model_best)
 
     model.load_state_dict(param_latest_loaded['state_dict'])
@@ -60,25 +66,27 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)
 
+    logging.info("Saving latest model to {}".format(jit_model_latest))
     traced_script_module.save(jit_model_latest)
 
     logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
     mcts_best = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts_best.set_alpha_default()
+    mcts_best.set_threads(THREADS)
     mcts_best.set_params(jit_model_best)
 
     mcts_latest = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
     mcts_latest.set_alpha_default()
+    mcts_latest.set_threads(THREADS)
     mcts_latest.set_params(jit_model_latest)
 
     wins_best   = 0
     wins_latest = 0
     draws       = 0
 
-    logging.info("Running {} games".format(EVAL_GAMES))
+    logging.info("Running {} games, timeout is set to {}".format(EVAL_GAMES, TIMEOUT_EVAL))
     start_eval = datetime.now()
     logging.info("Starting at {}".format(start_eval))
-    logging.info("Best playing {} games as first player".format(EVAL_GAMES//2))
 
     # figuring out which player will move first
     tools.make_init_moves(mcts_best, mcts_latest)
@@ -112,6 +120,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
                 draws += 1
 
         end = datetime.now()
+        logging.info("\n{}".format(mcts_best))
         logging.info("Winner is {}".format(mcts_best.winner))
         logging.info("Game took {}".format(end-start))
         logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
@@ -122,6 +131,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
         if (end - start_eval).seconds >= TIMEOUT_EVAL*60:
             logging.info("Timeout expired")
             break
+        logging.info("----------------------------------------")
 
     print("Final result:")
     print("\tBest wins:   {}".format(wins_best))
@@ -149,6 +159,7 @@ def eval_game(mcts_first, mcts_second):
         mcts_second.make_move(move)
 
         if mcts_first.winner != -1:
+            logging.info("Game ended in {} moves".format(i))
             break
 
         mcts_second.simulate(SIMS)
@@ -158,8 +169,8 @@ def eval_game(mcts_first, mcts_second):
         mcts_second.make_move(move)
 
         if mcts_first.winner != -1:
+            logging.info("Game ended in {} moves".format(i))
             break
-
     return
 
 if __name__ == "__main__":
@@ -168,7 +179,7 @@ if __name__ == "__main__":
         print("Best model {} is also the latest".format(param_latest))
         sys.exit(1)
     model_class = getattr(model_module, MODEL_CLASS)
-    if eval_models(model_class, param_best, param_latest, True):
+    if eval_models(model_class, param_best, param_latest, False):
         print("Evluation of params {} and {} finished successfuly"
                 .format(param_best, param_latest))
     else:

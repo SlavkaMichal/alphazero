@@ -48,8 +48,10 @@ do
 esac
 done
 
-echo "SEQUENCE=$SEQUENCE"
-export SEQUENCE
+if [ "x$SEQUENCE" != "x" ]; then
+	echo "SEQUENCE=$SEQUENCE"
+	export SEQUENCE
+fi
 source env.sh $PYTHON
 
 if [ $ACTION == "n" ]; then
