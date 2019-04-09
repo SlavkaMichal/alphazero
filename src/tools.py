@@ -199,7 +199,7 @@ def init_param_file():
 def self_play_config():
     s = ""
     s += "Number of training samples to generate: {}\n".format(TRAIN_SAMPLES)
-    s += "Timeout for self play: {} min\n".format(TIMEOUT_SELF_PLAY)
+    s += "Timeout for self play: {} minutes\n".format(TIMEOUT_SELF_PLAY)
     s += "Data destination: {}\n".format(DATA_PATH)
     s += "Threads: {}\n".format(DATA_PATH)
     s += "Parameters loaded from: {}\n".format(PARAM_PATH)
@@ -210,25 +210,25 @@ def self_play_config():
 
 def train_config():
     s = ""
-    s += "Data source: {}".format(DATA_PATH)
-    s += "Parameters loaded from: {}".format(PARAM_PATH)
-    s += "Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS)
-    s += "Torch from: {}".format(torch.__file__)
-    s += "Learning rate: {}".format(LR)
-    s += "Epochs: {}".format(EPOCHS)
-    s += "Batch size: {}".format(BATCH_SIZE)
-    s += "Starting window size: {}".format(WINDOW[0])
-    s += "Max window size: {}".format(WINDOW[1])
-    s += "Window size incremented every {} generation".format(WINDOW[2])
+    s += "Data source: {}\n".format(DATA_PATH)
+    s += "Parameters loaded from: {}\n".format(PARAM_PATH)
+    s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Torch from: {}\n".format(torch.__file__)
+    s += "Learning rate: {}\n".format(LR)
+    s += "Epochs: {}\n".format(EPOCHS)
+    s += "Batch size: {}\n".format(BATCH_SIZE)
+    s += "Starting window size: {}\n".format(WINDOW[0])
+    s += "Max window size: {}\n".format(WINDOW[1])
+    s += "Window size incremented every {} generation\n".format(WINDOW[2])
     return s
 
 def eval_config():
     s = ""
-    s += "Parameters loaded from: {}".format(PARAM_PATH)
-    s += "Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS)
-    s += "Torch from: {}".format(torch.__file__)
-    s += "MCTS number of threads: {}".format(THREADS)
-    s += "Number of games: {}".format(EVAL_GAMES)
-    s += "Timeout: {}m".format(EVAL_GAMES)
+    s += "Parameters loaded from: {}\n".format(PARAM_PATH)
+    s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Torch from: {}\n".format(torch.__file__)
+    s += "MCTS number of threads: {}\n".format(THREADS)
+    s += "Number of games: {}\n".format(EVAL_GAMES)
+    s += "Timeout: {} minutes\n".format(EVAL_GAMES)
     return s
 
