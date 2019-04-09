@@ -56,8 +56,8 @@ def train(model_class, param_file, new_param_file, data_files):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-    criterion_pi = torch.nn.BCEWithLogitsLoss()
-    criterion_v  = torch.nn.MSELoss()
+    criterion_pi = torch.nn.KLDivLoss(reduction='batchmean')
+    criterion_v  = torch.nn.MSELoss(reduction='mean')
 
     # show progress 100 times per epoch
     view_step = data.size//BATCH_SIZE//10
@@ -76,7 +76,7 @@ def train(model_class, param_file, new_param_file, data_files):
         for i in range(data.size//BATCH_SIZE):
             #batch_ids = np.random.choice(data.size, BATCH_SIZE)
             batch_input   = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['board'])
-            batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1,1)
+            batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1)
             batch_plabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['pi'])
             if cuda:
                 batch_input.cuda()
@@ -96,7 +96,7 @@ def train(model_class, param_file, new_param_file, data_files):
             loss.backward()
             optimizer.step()
             if i % view_step == view_step -1:
-                logging.info("Epoch: {}\nIteration: {}\nvalue accuracy: {}\npi accuracy:{}\nTotal loss:{}".
+                logging.info("Epoch: {}\nIteration: {}\nValue loss:\t{}\nPI loss:\t{}\nTotal loss:\t{}".
                         format(e,i,acc_vloss/i,acc_ploss/i,acc_loss/i))
 
         end = datetime.now()
