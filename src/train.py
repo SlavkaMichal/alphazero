@@ -34,9 +34,9 @@ def train(model_class, param_file, new_param_file, data_files):
     params = torch.load(param_file)
     if cuda:
         model.load_state_dict(params['state_dict']).cuda()
+        logging.info("GPU {}",torch.cuda.get_device_name())
     else:
         model.load_state_dict(params['state_dict'])
-    logging.info("GPU {}",torch.cuda.get_divice_name())
 
     # get window
     logging.info("Training files:")
