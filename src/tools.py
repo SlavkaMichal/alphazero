@@ -6,7 +6,6 @@ import json
 from glob import glob
 import os
 from datetime import datetime
-import cmcts
 import torch
 
 info_file = "../.info"
@@ -175,7 +174,12 @@ def get_best():
             return path
 
         if not os.path.isfile(content['path']):
-            raise RuntimeError("File {} does not exst".format(path))
+            path = os.path.basename(content['path'])
+            path = os.path.join(PARAM_PATH, path)
+            if not os.path.isfile(path):
+                raise RuntimeError("File {} does not exst".format(content['path']))
+            return path
+
         return content['path']
 
 def set_best(path):
@@ -201,7 +205,6 @@ def self_play_config():
     s += "Parameters loaded from: {}\n".format(PARAM_PATH)
     s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
     s += "Torch from: {}\n".format(torch.__file__)
-    s += "MCTS from: {}\n".format(cmcts.__file__)
     s += "MCTS number of threads: {}\n".format(THREADS)
     return s
 
@@ -224,7 +227,6 @@ def eval_config():
     s += "Parameters loaded from: {}".format(PARAM_PATH)
     s += "Model from: {}.{}".format(MODEL_MODULE, MODEL_CLASS)
     s += "Torch from: {}".format(torch.__file__)
-    s += "MCTS from: {}".format(cmcts.__file__)
     s += "MCTS number of threads: {}".format(THREADS)
     s += "Number of games: {}".format(EVAL_GAMES)
     s += "Timeout: {}m".format(EVAL_GAMES)

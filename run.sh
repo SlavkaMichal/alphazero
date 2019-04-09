@@ -61,10 +61,10 @@ if [ $ACTION == "n" ]; then
 elif [ $ACTION == "s" ]; then
 	echo "running $PYTHON self-play.py"
 	$PYTHON src/self_play.py
+elif [ $ACTION == "e" ]; then
+	echo "running $PYTHON eval.py"
+	$PYTHON "src/eval.py" && echo "Success"
 elif [ $ACTION == "t" ]; then
 	echo "running $PYTHON train.py"
 	$PYTHON src/train.py
-elif [ $ACTION == "e" ]; then
-	echo "running $PYTHON eval.py"
-	$PYTHON src/eval.py
 fi

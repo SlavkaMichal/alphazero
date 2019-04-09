@@ -3,7 +3,6 @@ sys.path.append('..')
 from config import *
 from importlib import import_module
 model_module = import_module(MODEL_MODULE)
-import cmcts
 import pdb
 import os
 import glob
@@ -18,7 +17,11 @@ def train(model_class, param_file, new_param_file, data_files):
             filename="{}/train_{}.log".format(LOG_PATH, os.path.basename(new_param_file).replace(".pyt",'')),
             level=logging.DEBUG)
     logging.info("########################################")
+    logging.info(tools.train_config())
+    print(tools.train_config())
 
+    cuda = torch.cuda.is_available()
+    logging.info("Is cuda avalable {}".format(cuda))
     logging.info("Using model {} for training".format(param_file))
     logging.info("New model is {}".format(new_param_file))
 
@@ -29,7 +32,11 @@ def train(model_class, param_file, new_param_file, data_files):
         return False
 
     params = torch.load(param_file)
-    model.load_state_dict(params['state_dict'])
+    if cuda:
+        model.load_state_dict(params['state_dict']).cuda()
+    else:
+        model.load_state_dict(params['state_dict'])
+    logging.info("GPU {}",torch.cuda.get_divice_name())
 
     # get window
     logging.info("Training files:")
@@ -71,7 +78,10 @@ def train(model_class, param_file, new_param_file, data_files):
             batch_input   = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['board'])
             batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1,1)
             batch_plabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['pi'])
-
+            if cuda:
+                batch_input.cuda()
+                batch_vlabels.cuda()
+                batch_plabels.cuda()
             v, pi = model(batch_input)
 
             vloss = criterion_v(v, batch_vlabels)

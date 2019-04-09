@@ -85,9 +85,9 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
         logging.info("Game took {}".format(end-start))
         i = i + 1
         if i%10  == 9:
-            logging.info("Creating checkpoint with {} games"format(i))
-            logging.info("Played in total {} ({} moves, {}s per move)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
+            logging.info("Creating checkpoint with {} games".format(i))
             npdata = np.stack(data)
+            logging.info("Played in total {} ({} moves, {}s per move)".format(npdata.shape[0],npdata.shape[0]/i,(end-start_gen)/i))
             np.save(data_file, npdata)
             del npdata
 

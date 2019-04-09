@@ -25,9 +25,11 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
             level=logging.DEBUG)
     print("Log saved to {}".format(log_file))
     logging.info("########################################")
+    logging.info(tools.eval_config())
+    logging.info("MCTS from: {}".format(cmcts.__file__))
+    print(tools.eval_config())
 
     model = model_class()
-
 
     logging.info("Best model {}".format(param_best))
     logging.info("Latest model {}".format(param_latest))
@@ -45,7 +47,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
             os.path.basename(param_best).replace(".pyt",''))
     jit_model_latest = "{}/tmp_{}_latest.pt".format(
             os.path.dirname(os.path.realpath(__file__)),
-            os.path.basename(param_latest).replace(".pyt",'').replace(":", ''))
+            os.path.basename(param_latest).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
     model.load_state_dict(param_best_loaded['state_dict'])

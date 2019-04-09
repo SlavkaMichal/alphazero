@@ -40,17 +40,17 @@ TIMEOUT_SELF_PLAY = 30
 EVAL_GAMES = 50
 
 # max evaluation time in minutes
-TIMEOUT_EVAL = 100
+TIMEOUT_EVAL = 50
 
 ##############################################################################
 #                                    training                                #
 ##############################################################################
 
 # number of epochs
-EPOCHS = 4
+EPOCHS = 2
 
 # training learning rate
-LR = 0.005
+LR = 0.001
 
 # batch size
 BATCH_SIZE = 16
