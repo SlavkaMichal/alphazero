@@ -12,16 +12,25 @@ MODEL_CLASS = "simplerNN"
 PROC_NUM = 12
 
 # path to neural network parameters
-PARAM_PATH = "{}/model".format(os.path.dirname(os.path.realpath(__file__)))
+PARAM_PATH = "{}/parameters".format(os.path.dirname(os.path.realpath(__file__)))
 
 # path to data
 DATA_PATH = "{}/data".format(os.path.dirname(os.path.realpath(__file__)))
+
+# path to configuration backups
+CONFIG_PATH = "{}/config".format(os.path.dirname(os.path.realpath(__file__)))
 
 # path to logs
 LOG_PATH = "{}/logs".format(os.path.dirname(os.path.realpath(__file__)))
 
 # file containing path to best parameters
 PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__)))
+
+# load config
+if 'CONFIG' in os.environ:
+    LOAD_CONFIG = os.environ['CONFIG']
+else:
+    LOAD_CONFIG = ""
 
 ##############################################################################
 #                                 sefl-play                                  #
@@ -31,7 +40,7 @@ PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__))
 TRAIN_SAMPLES = 10000000
 
 # max generating time
-TIMEOUT_SELF_PLAY = 30
+TIMEOUT_SELF_PLAY = 1
 
 ##############################################################################
 #                                 evaluation                                 #
@@ -47,7 +56,7 @@ TIMEOUT_EVAL = 50
 ##############################################################################
 
 # number of epochs
-EPOCHS = 2
+EPOCHS = 10000
 
 # training learning rate
 LR = 0.001
@@ -80,7 +89,8 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+#PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
 INSTALL_PYTORCH = False

@@ -18,6 +18,7 @@ def train(model_class, param_file, new_param_file, data_files):
             level=logging.DEBUG)
     logging.info("########################################")
     logging.info(tools.train_config())
+    tools.config_save(os.path.basename(new_param_file).replace(".pyt", ''))
     print(tools.train_config())
 
     cuda = torch.cuda.is_available()
@@ -26,17 +27,23 @@ def train(model_class, param_file, new_param_file, data_files):
     logging.info("New model is {}".format(new_param_file))
 
     model = model_class()
+    model.train()
 
-    if not os.path.isfile(param_file):
-        logging.error("File \"{}\" does not exists".format(param_file))
-        return False
 
     params = torch.load(param_file)
-    if cuda:
-        model.load_state_dict(params['state_dict']).cuda()
-        logging.info("GPU {}",torch.cuda.get_device_name())
+
+    if not os.path.isfile(param_file):
+        logging.warning("File \"{}\" does not exists".format(param_file))
     else:
-        model.load_state_dict(params['state_dict'])
+        try:
+            if cuda:
+                model.load_state_dict(params['state_dict']).cuda()
+                logging.info("GPU {}",torch.cuda.get_device_name())
+            else:
+                model.load_state_dict(params['state_dict'])
+        except RuntimeError as e:
+                logging.warning("Could not load parametrs")
+                logging.warning(e)
 
     # get window
     logging.info("Training files:")
@@ -47,67 +54,77 @@ def train(model_class, param_file, new_param_file, data_files):
     for d in data_files:
         logging.info("\t{}".format(d))
 
-    data_list = [ tools.get_rotations(tools.get_unique(np.load(d))) for d in data_files ]
-    #data_list = [ tools.get_rotations(tools.get_unique(np.load(d))) for d in data_files ]
+    data_list = [ np.load(d) for d in data_files ]
 
     data = np.concatenate(data_list)
-
+    #data = tools.get_rotations(tools.get_unique(data))
+    data = tools.get_unique(data)
     del data_list
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     criterion_pi = torch.nn.KLDivLoss(reduction='batchmean')
-    criterion_v  = torch.nn.MSELoss(reduction='mean')
+    criterion_v  = torch.nn.MSELoss()
 
-    # show progress 100 times per epoch
-    view_step = data.size//BATCH_SIZE//10
-    logging.info("Data size {} divided into {} batches of size {}".format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
+    view_step = data.size//20
+    logging.info("Data size {} divided into {} batches of size {}".
+            format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
     start_train = datetime.now()
     logging.info("Starting at {}".format(start_train))
 
     for e in range(EPOCHS):
-        start_epoch = datetime.now()
-        np.random.shuffle(data)
-        logging.info("Running epoch {}/{}".format(e,EPOCHS))
         acc_vloss = 0
         acc_ploss = 0
         acc_loss  = 0
+        it = 0
+        start_epoch = datetime.now()
+        #np.random.shuffle(data)
+        logging.info("Running epoch {}/{}".format(e,EPOCHS))
         acc_batchtime = None
-        for i in range(data.size//BATCH_SIZE):
+        for i in range(data.size):
             #batch_ids = np.random.choice(data.size, BATCH_SIZE)
-            batch_input   = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['board'])
-            batch_vlabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['r']).reshape(-1)
-            batch_plabels = torch.from_numpy(data[i*BATCH_SIZE:(1+i)*BATCH_SIZE]['pi'])
+            #batch_input   = torch.from_numpy(data[batch_ids]['board'])
+            #batch_vlabels = torch.from_numpy(data[batch_ids]['r']).reshape(-1)
+            #batch_plabels = torch.from_numpy(data[batch_ids]['pi'])
+
+            # batch size is one
+            batch_input   = torch.from_numpy(data[i:i+1]['board'])
+            batch_vlabels = torch.from_numpy(data[i:i+1]['r']).reshape(-1)
+            batch_plabels = torch.from_numpy(data[i:i+1]['pi'])
             if cuda:
                 batch_input.cuda()
                 batch_vlabels.cuda()
                 batch_plabels.cuda()
-            v, pi = model(batch_input)
+            v, p = model(batch_input)
 
+            # computing loss
             vloss = criterion_v(v, batch_vlabels)
-            ploss = criterion_pi(pi, batch_plabels)
+            ploss = criterion_pi(p, (batch_plabels+1e-15))
             loss = vloss + ploss
+            #ploss = -((pi+1e-15).log()*batch_plabels).sum()/pi.shape[0]
 
+            it += 1
             acc_vloss += vloss.item()
             acc_ploss += ploss.item()
             acc_loss  += loss.item()
 
+            # backpropagation
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             if i % view_step == view_step -1:
-                logging.info("Epoch: {}\nIteration: {}\nValue loss:\t{}\nPI loss:\t{}\nTotal loss:\t{}".
-                        format(e,i,acc_vloss/i,acc_ploss/i,acc_loss/i))
+                logging.info("step:\n\tVALUE loss:\t{}\n\tPI loss:\t{}\n\tTOTAL loss:\t{}".
+                        format( vloss.item(),ploss.item(), loss.item()))
+                logging.info("diffV {}".format(v[0].item() - batch_vlabels[0].item()))
+                logging.info("diffP {}".format((p[0].exp() - batch_plabels[0]).sum().item()))
 
+        # end of epoch
         end = datetime.now()
         logging.info("Epoch {} took {}".format(e, end-start_epoch))
-        logging.info("value accuracy: {}\npi accuracy:{}\nTotal loss:{}".
-                        format(acc_vloss/i,acc_ploss/i,acc_loss/i))
-        logging.info("Checkpoint model {}".format(new_param_file))
-        torch.save({
-            'state_dict' : model.state_dict(),
-            },new_param_file)
+        logging.info("AccValue loss: {}\nAccPi loss:{}\nTotal loss:{}".
+                        format(acc_vloss/it,acc_ploss/it,acc_loss/it))
 
+    # saving new parameters
     logging.info("Training took {}".format(end-start_train))
     logging.info("Saving model to {}".format(new_param_file))
     torch.save({

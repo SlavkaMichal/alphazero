@@ -82,7 +82,6 @@ def get_rotations(data):
     for d in data:
         board = d['board']
         pi = d['pi'].reshape(shape,shape)
-        r = d['r']
 
         for r in range(7):
             if r == 3:
@@ -92,12 +91,16 @@ def get_rotations(data):
                 board = np.rot90(board, axes=(1,2))
                 pi    = np.rot90(pi)
 
-            rotations.append(np.array((board, pi.reshape(-1), r), dtype=dt))
+            print(d['r'])
+            rotations.append(np.array((board, pi.reshape(-1), d['r']), dtype=dt))
 
     return np.concatenate([data, np.stack(rotations)])
 
 def info_train():
-    best = get_best()
+    if 'PARAM' in os.environ:
+        best = get_param_file(os.environ['PARAM'])
+    else:
+        best = get_best()
 
     if best is None:
         best = get_latest()
@@ -107,8 +110,11 @@ def info_train():
 
     new_param_file = "{}/{}{}_{}.pyt".format(
             PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
-    data_files = glob("{}/{}{}_*.npy".format(
-        DATA_PATH, MODEL_CLASS, SHAPE))
+    if 'DATA_FILES' in os.environ:
+        data_files = os.environ['DATA_FILES'].replace(' ','').split(',')
+    else:
+        data_files = glob("{}/{}{}_*.npy".format(
+            DATA_PATH, MODEL_CLASS, SHAPE))
 
     data_files.sort()
     #window = min(WINDOW[0]+(len(data_files)-4)//WINDOW[2], WINDOW[1])
@@ -126,7 +132,10 @@ def info_generate():
     """ returns best params and new data file name
         must return valid values!!
     """
-    best = get_best()
+    if 'PARAM' in os.environ:
+        best = get_param_file(os.environ['PARAM'])
+    else:
+        best = get_best()
 
     if 'SEQUENCE' in os.environ:
         seq = os.environ['SEQUENCE']
@@ -145,11 +154,19 @@ def info_generate():
     return best, file_name
 
 def info_eval():
+    if 'PARAM' in os.environ != 'VERSUS' in os.environ:
+        raise RuntimeError("Only one out of -p|--param and -v|--versus specified. Specify both or none")
+    if 'PARAM' in os.environ and 'VERSUS' in os.environ:
+        print( get_param_file(os.environ['PARAM1']), get_param_file(os.environ['PARAM1']), True)
+        sys.exit()
+        return get_param_file(os.environ['PARAM1']), get_param_file(os.environ['PARAM1']), True
     best = get_best()
     latest = get_latest()
     if best == latest:
         return None, latest
-    return best, latest
+    print(best, latest, False)
+    sys.exit()
+    return best, latest, False
 
 def get_latest():
     param_files = glob("{}/{}{}_*.pyt".format(
@@ -161,6 +178,14 @@ def get_latest():
         return "{}/{}".format(PARAM_PATH, param_files[-1])
     return param_files[-1]
 
+def get_param_file(name):
+    if os.path.isfile(name):
+        return name
+    abs_name = "{}/{}".format(PARAM_PATH, os.path.basename(name))
+    if os.path.isfile(abs_name):
+        return abs_name
+    else:
+        raise RuntimeError("File {} or {} does not exists".format(name, abs_name))
 
 def get_best():
     with open(PARAM_BEST, "r+") as fp:
@@ -232,3 +257,12 @@ def eval_config():
     s += "Timeout: {} minutes\n".format(EVAL_GAMES)
     return s
 
+def config_load(conf_file=LOAD_CONFIG):
+    conf_file = "{}/{}".format(CONFIG_PATH, os.path.basename(conf_file))
+    if not os.path.isfile(conf_file):
+        raise RuntimeError("Configuration file {} not found".format(conf_file))
+
+
+
+def config_save(conf_name):
+    pass

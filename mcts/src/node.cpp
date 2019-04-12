@@ -34,7 +34,7 @@ set_prior(torch::Tensor p, double *dir)
 	// TODO som si isty ze toto ide aj lepsie
 	for (int i = 0; i < SIZE; i++){
 		// dir sum to 1 also p should
-		childP.at(i) = 0.75*ptr[i]+0.25*dir[i];
+		childP.at(i) = 0.75*exp(ptr[i])+0.25*dir[i];
 	}
 
 	nodeN = 0;

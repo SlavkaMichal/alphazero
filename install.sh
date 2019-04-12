@@ -146,7 +146,7 @@ touch mcts/.timestamp
 if [ $DEBUG == "True" ]; then
 	echo "Creating missing directories"
 fi
-if [ ! -d "model" ]; then
+if [ ! -d "parameters" ]; then
 	echo "Creating model directory"
 	mkdir "model"
 fi

@@ -23,7 +23,10 @@ accordingly
 
 ## TODO:
 * create evaluation thread
-* check if cuda works
+	* node that needs to be evaluated will be locked board and evaluating
+will be not blocking right away but will have the node lock until nn is called
+	*
+* check if cuda works - I am not able to compile pytorch with cuda
 * cache (maybe sometime)
 
 ## Notes:

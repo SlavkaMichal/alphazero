@@ -29,7 +29,15 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     if os.path.isfile(param_file):
         logging.info("Loading model parameters from {}".format(param_file))
         params = torch.load(param_file)
-        model.load_state_dict(params['state_dict'])
+        try:
+            model.load_state_dict(params['state_dict'])
+        except RuntimeError as e:
+            logging.info("Could not load parametrs")
+            logging.info(e)
+            logging.info("Saving new model parameters to {}".format(param_file))
+            torch.save({
+                'state_dict' : model.state_dict(),
+                }, param_file)
     else:
         logging.info("No parameters provided")
         logging.info("Saving new model parameters to {}".format(param_file))
@@ -46,6 +54,8 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     if CUDA:
         example.cuda()
         model.cuda()
+
+    model.eval()
 
     with torch.no_grad():
         traced_script_module = torch.jit.trace(model, example)

@@ -30,6 +30,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     print(tools.eval_config())
 
     model = model_class()
+    model.eval()
 
     logging.info("Best model {}".format(param_best))
     logging.info("Latest model {}".format(param_latest))
@@ -62,6 +63,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     traced_script_module.save(jit_model_best)
 
     model.load_state_dict(param_latest_loaded['state_dict'])
+
     if CUDA:
         model.cuda()
 
@@ -176,12 +178,12 @@ def eval_game(mcts_first, mcts_second):
     return
 
 if __name__ == "__main__":
-    param_best, param_latest = tools.info_eval()
+    param_best, param_latest, dry_run = tools.info_eval()
     if param_best == None:
         print("Best model {} is also the latest".format(param_latest))
         sys.exit(1)
     model_class = getattr(model_module, MODEL_CLASS)
-    if eval_models(model_class, param_best, param_latest, False):
+    if eval_models(model_class, param_best, param_latest, dry_run):
         print("Evluation of params {} and {} finished successfuly"
                 .format(param_best, param_latest))
     else:
