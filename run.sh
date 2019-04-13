@@ -14,6 +14,7 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
   -d, --data=[DATA LIST]\t\tcoma-separated list of data files, NO SPACES can be used\n
   -c, --config=[CONFIG NAME]\tload configuration file and architecture,\n
                             \t\t\t\tif in combination with --train original configuration will be restored\n\n
+  -r, --restore\trestore last configureation file\n
   -i, --sequence=[SEQ NUMBER]\tif running multiple scripts at once it's good to add sequence number\n
   -h, --help\t\t\tprint this\n
   -p, --python=[PYTHON]\t\tpath to python interpret\n\n
@@ -27,6 +28,7 @@ CONFIG=""
 PARAM=""
 DATA_FILES=""
 VERSUS=""
+RESTORE="false"
 
 while [[ $# -gt 0 ]]
 do
@@ -73,6 +75,10 @@ do
 		shift
 		shift
 		;;
+	-r|--restore)
+		RESTORE="true"
+		shift
+		;;
 	-p|--python)
 		PYTHON="$2"
 		shift
@@ -82,13 +88,27 @@ do
 esac
 done
 
+if [ "$RESTORE" == "true" ]; then
+	if [ -f "config/tmp_conf.py" ]; then
+		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
+		rm -v "config/tmp_conf.py"
+	else
+		echo "Temporary configuration file does not exists"
+	fi
+	exit
+fi
 if [ "$SEQUENCE" != "" ]; then
 	echo "SEQUENCE=$SEQUENCE"
 	export SEQUENCE
 fi
 if [ "$CONFIG" != "" ]; then
 	echo "CONFIG=$CONFIG"
-	$PYTHON -c "import src.tools as t; t.config_save('tmp_conf.py'); t.config_load($CONFIG)"
+	$PYTHON -c "import src.tools as t; t.config_save('tmp.py'); t.config_load('$CONFIG')"
+	if [ $ACTION == "n" ]; then
+		echo "Config succesfully loaded"
+		echo "To restore original config run '$0 -r | --resotre'"
+		exit
+	fi
 	export CONFIG
 fi
 if [ "$PARAM" != "" ]; then
@@ -114,23 +134,21 @@ elif [ $ACTION == "s" ]; then
 	echo "running $PYTHON self-play.py"
 	$PYTHON src/self_play.py
 	if [ "$CONFIG" != "" ]; then
-		$PYTHON -c "import src.tools as t; t.config_load('tmp_conf.py')"
+		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
+		rm 'config/tmp_conf.py'
 	fi
 elif [ $ACTION == "e" ]; then
 	echo "running $PYTHON eval.py"
 	$PYTHON "src/eval.py" && echo "Success"
 	if [ "$CONFIG" != "" ]; then
-		$PYTHON -c "import src.tools as t; t.config_load('tmp_conf.py')"
+		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
+		rm 'config/tmp_conf.py'
 	fi
 elif [ $ACTION == "t" ]; then
 	echo "running $PYTHON train.py"
 	$PYTHON src/train.py
 	if [ "$CONFIG" != "" ]; then
-		$PYTHON -c "import src.tools as t; t.config_load('tmp_conf.py')"
+		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
+		rm 'config/tmp_conf.py'
 	fi
-fi
-
-
-if [ "$CONFIG" != "" ]; then
-	rm 'tmp_conf.py'
 fi

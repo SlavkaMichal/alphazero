@@ -7,6 +7,7 @@ from glob import glob
 import os
 from datetime import datetime
 import torch
+import shutil
 
 info_file = "../.info"
 best_file = "../.best"
@@ -258,11 +259,15 @@ def eval_config():
     return s
 
 def config_load(conf_file=LOAD_CONFIG):
+    print(CONFIG_PATH)
+    print(os.path.basename(conf_file))
+    print(conf_file)
+    sys.exit()
     conf_file = "{}/{}".format(CONFIG_PATH, os.path.basename(conf_file))
     if not os.path.isfile(conf_file):
         raise RuntimeError("Configuration file {} not found".format(conf_file))
-
-
+    print("Loading {}".format(conf_file))
+    shutil.move(conf_file, "{}/congig.py".format(ROOT))
 
 def config_save(conf_name):
-    pass
+    shutil.copyfile('config.py'.format(ROOT), "{}/config/conf_{}.py".format(ROOT, conf_name))
