@@ -7,6 +7,8 @@ mcts/cmake
 mcts/cmcts.egg-info
 mcts/dist
 model
+parameters
+config
 data
 tests
 .info
