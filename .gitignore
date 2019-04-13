@@ -1,5 +1,6 @@
 __pycache__
 src/*.pt
+*.pyc
 logs
 init.py
 mcts/build

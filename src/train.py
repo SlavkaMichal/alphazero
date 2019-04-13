@@ -29,14 +29,13 @@ def train(model_class, param_file, new_param_file, data_files):
     model = model_class()
     model.train()
 
-
-    params = torch.load(param_file)
-
-    if not os.path.isfile(param_file):
+    if param_file is None or not os.path.isfile(param_file):
         # if no parameters found continue with randomly initialised parameters
         logging.warning("File \"{}\" does not exists".format(param_file))
     else:
+        print(param_file)
         try:
+            params = torch.load(param_file)
             if cuda:
                 model.load_state_dict(params['state_dict']).cuda()
                 logging.info("GPU {}",torch.cuda.get_device_name())
@@ -136,7 +135,9 @@ def train(model_class, param_file, new_param_file, data_files):
     return True
 
 if __name__ == "__main__":
-    param_file, new_param_file, data_files = tools.info_train()
+    param_file = tools.get_params()
+    new_param_file = tools.get_new_params()
+    data_files = tools.get_data()
     model_class = getattr(model_module, MODEL_CLASS)
     if train(model_class, param_file, new_param_file, data_files):
         print("New model parameters were saved to {}".format(new_param_file))

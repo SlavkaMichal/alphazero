@@ -7,7 +7,7 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
   -t, --train\ttrain neural network\n
   -e, --eval\tevaluate current best nn against latest\n\n
  OPTIONS\n
-  -p, --param=[PARAM FILE]\tparameters that will be used for each action,\n
+  -o, --param=[PARAM FILE]\tparameters that will be used for each action,\n
                           \t\t\t\tif -e is specified -v is required\n\n
   -v, --versus=[PARAM FILE]\tmodel parameters that will be used for evaluation
                            \t\t\t\tagainst other supplied parameters\n
@@ -23,12 +23,7 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
 
 PYTHON=$(which python)
 ACTION="n"
-SEQUENCE="0"
 CONFIG=""
-PARAM=""
-DATA=""
-VERSUS=""
-RESTORE="false"
 
 while [[ $# -gt 0 ]]
 do
@@ -52,31 +47,58 @@ do
 		;;
 	-i|--sequence)
 		SEQUENCE="$2"
+		echo "SEQUENCE=$SEQUENCE"
+		export SEQUENCE
 		shift
 		shift
 		;;
-	-p|--param)
+	-o|--param)
 		PARAM="$2"
+		echo "PARAM=$PARAM"
+		export PARAM
 		shift
 		shift
 		;;
 	-v|--versus)
 		VERSUS="$2"
+		echo "VERSUS=$VERSUS"
+		export VERSUS
 		shift
 		shift
 		;;
 	-d|--data)
 		DATA="$2"
+		echo "DATA=$DATA"
+		export DATA
 		shift
 		shift
 		;;
 	-c|--config)
 		CONFIG="$2"
+		echo "CONFIG=$CONFIG"
+		$PYTHON -c "import src.tools as t; t.config_save('tmp.py'); t.config_load('$CONFIG')"
+		if [ $ACTION == "n" ]; then
+			echo "Config succesfully loaded"
+			echo "To restore original config run '$0 -r | --resotre'"
+			exit
+		fi
+		export CONFIG
 		shift
 		shift
 		;;
 	-r|--restore)
-		RESTORE="true"
+		if [ -f "config/tmp_conf.py" ]; then
+			$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
+			rm -v "config/tmp_conf.py"
+		else
+			echo "Temporary configuration file does not exists"
+		fi
+		exit
+		shift
+		;;
+	-n|--dry-run)
+		DRY_RUN="true"
+		export DRY_RUN
 		shift
 		;;
 	-p|--python)
@@ -87,42 +109,6 @@ do
 	*)
 esac
 done
-
-if [ "$RESTORE" == "true" ]; then
-	if [ -f "config/tmp_conf.py" ]; then
-		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
-		rm -v "config/tmp_conf.py"
-	else
-		echo "Temporary configuration file does not exists"
-	fi
-	exit
-fi
-if [ "$SEQUENCE" != "" ]; then
-	echo "SEQUENCE=$SEQUENCE"
-	export SEQUENCE
-fi
-if [ "$CONFIG" != "" ]; then
-	echo "CONFIG=$CONFIG"
-	$PYTHON -c "import src.tools as t; t.config_save('tmp.py'); t.config_load('$CONFIG')"
-	if [ $ACTION == "n" ]; then
-		echo "Config succesfully loaded"
-		echo "To restore original config run '$0 -r | --resotre'"
-		exit
-	fi
-	export CONFIG
-fi
-if [ "$PARAM" != "" ]; then
-	echo "PARAM=$PARAM"
-	export PARAM
-fi
-if [ "$VERSUS" != "" ]; then
-	echo "VERSUS=$CONFIG"
-	export VERSUS
-fi
-if [ "$DATA" != "" ]; then
-	echo "DATA=$CONFIG"
-	export DATA
-fi
 
 source env.sh $PYTHON
 

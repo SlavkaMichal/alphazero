@@ -56,7 +56,7 @@ VALUE_LAYER_CNT = 2
 ##############################################################################
 #                                 sefl-play                                  #
 ##############################################################################
-# how many training examples should be generated
+# how many data should be generated
 # optimally tens of thousands
 TRAIN_SAMPLES = 10000000
 
@@ -110,10 +110,10 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-# merlin
-#PREFIX = "{}/.local".format(os.path.dirname(ROOT))
-# meta and my pc
-PREFIX = "{}/.local".format(os.environ['HOME'])
+#  meta and merlin
+PREFIX = "{}/.local".format(os.path.dirname(ROOT))
+#my pc
+#PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
 INSTALL_PYTORCH = False

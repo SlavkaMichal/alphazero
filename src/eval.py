@@ -15,7 +15,7 @@ import tools
 from datetime import datetime
 import re
 
-def eval_models(model_class, param_best, param_latest, dry_run=False):
+def eval_models(model_class, param_best, param_latest):
     log_file = "{}/eval_{}_{}.log".format(
             LOG_PATH,
             os.path.basename(param_best).replace(".pyt",''),
@@ -146,8 +146,7 @@ def eval_models(model_class, param_best, param_latest, dry_run=False):
     logging.info("Latest win/loos ratio: {}".format(wins_latest/(wins_latest+wins_best)))
     if wins_latest/(wins_latest+wins_best) > 0.54:
         logging.info("Setting new best to {}".format(param_latest))
-        if not dry_run:
-            tools.set_best(param_latest)
+        tools.set_best(param_latest)
     else:
         logging.info("Latest model is not good enoug to replace current best")
     logging.info("####################END#################")
@@ -178,12 +177,20 @@ def eval_game(mcts_first, mcts_second):
     return
 
 if __name__ == "__main__":
-    param_best, param_latest, dry_run = tools.info_eval()
+    param_best   = tools.get_params()
+    param_latest = tools.get_versus()
     if param_best == None:
-        print("Best model {} is also the latest".format(param_latest))
+        print("Parameters were not found")
         sys.exit(1)
+    if param_latest == None:
+        print("Parameters were not found")
+        sys.exit(1)
+    if param_best == param_latest:
+        print("Best and latest are the same")
+        sys.exit(1)
+
     model_class = getattr(model_module, MODEL_CLASS)
-    if eval_models(model_class, param_best, param_latest, dry_run):
+    if eval_models(model_class, param_best, param_latest):
         print("Evluation of params {} and {} finished successfuly"
                 .format(param_best, param_latest))
     else:

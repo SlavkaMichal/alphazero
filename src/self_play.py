@@ -187,18 +187,13 @@ def self_play_game(mcts0, mcts1):
         # draw
         data['r'] = 1e-3
 
-    #data = []
-    #for i in range(len(data1)):
-    #    data.append(data0[i])
-    #    data.append(data1[i])
-    #if len(data0) > len(data1):
-    #    data.append(data0[-1])
-
-    #data = np.stack(data)
     return data
 
 if __name__ == "__main__":
-    param_file, data_file = tools.info_selfplay()
+    param_file = tools.get_param()
+    if param_file is None:
+        param_file = tools.get_new_param()
+    data_file  = tools.get_new_data()
     model_class = getattr(model_module, MODEL_CLASS)
     if self_play_iteration(model_class, param_file, data_file):
         print("Data were saved to file {}.npy".format(data_file))
