@@ -33,7 +33,7 @@ set(CMAKE_PREFIX_PATH ${LOCAL_SITE_PATH}/torch)
 find_package(Torch REQUIRED)
 
 add_definitions(-fPIC)
-add_definitions(-DSIZE=${SIZE} -DSHAPE=${SHAPE} -DMAJOR=${MAJOR} -DMINOR=${MINOR})
+add_definitions(-DSIZE=${SIZE} -DSHAPE=${SHAPE} -DMAJOR=${MAJOR} -DMINOR=${MINOR} -DGIT="${GIT}")
 SET(CMAKE_CXX_FLAGS "-g -fvisibility=hidden")
 
 

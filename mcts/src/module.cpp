@@ -12,6 +12,7 @@ int test(int i)
 PYBIND11_MODULE(cmcts, m) {
 	m.doc() = "This is documentation for CMTS module";
 	m.def("test", &test, "Documentation for function");
+	m.def("version", []() { return GIT; } );
 	py::class_<Cmcts>(m, "mcts")
 	.def(py::init<int, double, double>(), "seed"_a=0, "alpha"_a=1, "cpuct"_a=1)
 	.def_property("params",

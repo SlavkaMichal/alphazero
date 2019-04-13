@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-
 from config import *
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -9,6 +8,19 @@ from setuptools.command.build_ext import build_ext
 print("Installing with parameters:")
 print("\tsize: {}, shape: {}x{}".format(SIZE,SHAPE,SHAPE))
 __version__ = "{}.{}".format(MAJOR, MINOR)
+commit = subprocess.check_output([
+    "git",
+    "rev-parse",
+    "--short",
+    "HEAD"
+    ]).strip().decode('utf-8')
+branch = subprocess.check_output([
+    "git",
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD"
+    ]).strip().decode('utf-8')
+print("Building branch {}, commit {}".format(branch, commit))
 ext_name = 'cmcts'
 
 class MCTSExtension(Extension):
@@ -39,13 +51,12 @@ class MCTSBuild(build_ext):
                 '-DMINOR={}'.format(MINOR),
                 '-DLOCAL_SITE_PATH={}'.format(LOCAL_SITE_PATH),
                 '-DPREFIX={}'.format(PREFIX),
+                '-DGIT={}-{}'.format(branch, commit),
                 '-Wno-dev',
                 ]
 
         if HEUR:
             cmake_args.append('-DHEUR=ON')
-        if EXTENSION:
-            cmake_args.append('-DEXT=ON')
         if DEBUG:
             cmake_args.append('-DDEBUG=ON')
         if CUDA:
