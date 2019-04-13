@@ -33,6 +33,7 @@ def train(model_class, param_file, new_param_file, data_files):
     params = torch.load(param_file)
 
     if not os.path.isfile(param_file):
+        # if no parameters found continue with randomly initialised parameters
         logging.warning("File \"{}\" does not exists".format(param_file))
     else:
         try:
@@ -42,8 +43,9 @@ def train(model_class, param_file, new_param_file, data_files):
             else:
                 model.load_state_dict(params['state_dict'])
         except RuntimeError as e:
-                logging.warning("Could not load parametrs")
-                logging.warning(e)
+            # probably architecture has changed
+            logging.warning("Could not load parametrs")
+            logging.warning(e)
 
     # get window
     logging.info("Training files:")
@@ -54,10 +56,12 @@ def train(model_class, param_file, new_param_file, data_files):
     for d in data_files:
         logging.info("\t{}".format(d))
 
+    # loading data
     data_list = [ np.load(d) for d in data_files ]
 
     data = np.concatenate(data_list)
-    #data = tools.get_rotations(tools.get_unique(data))
+    # get all possible board rotations and remove duplicate board positions
+    #data = tools.get_unique(tools.get_rotations(data))
     data = tools.get_unique(data)
     del data_list
 
@@ -66,6 +70,7 @@ def train(model_class, param_file, new_param_file, data_files):
     criterion_pi = torch.nn.KLDivLoss(reduction='batchmean')
     criterion_v  = torch.nn.MSELoss()
 
+    # step in which log will be created
     view_step = data.size//20
     logging.info("Data size {} divided into {} batches of size {}".
             format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
@@ -78,19 +83,14 @@ def train(model_class, param_file, new_param_file, data_files):
         acc_loss  = 0
         it = 0
         start_epoch = datetime.now()
-        #np.random.shuffle(data)
         logging.info("Running epoch {}/{}".format(e,EPOCHS))
         acc_batchtime = None
-        for i in range(data.size):
-            #batch_ids = np.random.choice(data.size, BATCH_SIZE)
-            #batch_input   = torch.from_numpy(data[batch_ids]['board'])
-            #batch_vlabels = torch.from_numpy(data[batch_ids]['r']).reshape(-1)
-            #batch_plabels = torch.from_numpy(data[batch_ids]['pi'])
+        for i in range(data.size//BATCH_SIZE):
+            batch_ids = np.random.choice(data.size, BATCH_SIZE)
+            batch_input   = torch.from_numpy(data[batch_ids]['board'])
+            batch_vlabels = torch.from_numpy(data[batch_ids]['r']).reshape(-1, 1, 1, 1)
+            batch_plabels = torch.from_numpy(data[batch_ids]['pi'])
 
-            # batch size is one
-            batch_input   = torch.from_numpy(data[i:i+1]['board'])
-            batch_vlabels = torch.from_numpy(data[i:i+1]['r']).reshape(-1)
-            batch_plabels = torch.from_numpy(data[i:i+1]['pi'])
             if cuda:
                 batch_input.cuda()
                 batch_vlabels.cuda()
@@ -101,7 +101,6 @@ def train(model_class, param_file, new_param_file, data_files):
             vloss = criterion_v(v, batch_vlabels)
             ploss = criterion_pi(p, (batch_plabels+1e-15))
             loss = vloss + ploss
-            #ploss = -((pi+1e-15).log()*batch_plabels).sum()/pi.shape[0]
 
             it += 1
             acc_vloss += vloss.item()
@@ -115,14 +114,17 @@ def train(model_class, param_file, new_param_file, data_files):
             if i % view_step == view_step -1:
                 logging.info("step:\n\tVALUE loss:\t{}\n\tPI loss:\t{}\n\tTOTAL loss:\t{}".
                         format( vloss.item(),ploss.item(), loss.item()))
-                logging.info("diffV {}".format(v[0].item() - batch_vlabels[0].item()))
-                logging.info("diffP {}".format((p[0].exp() - batch_plabels[0]).sum().item()))
 
         # end of epoch
         end = datetime.now()
         logging.info("Epoch {} took {}".format(e, end-start_epoch))
-        logging.info("AccValue loss: {}\nAccPi loss:{}\nTotal loss:{}".
-                        format(acc_vloss/it,acc_ploss/it,acc_loss/it))
+        logging.info("Epoch:{} AccValue loss: {}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} AccPi loss:{}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} Total loss:{}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} checkpoint".format(new_param_file))
+        torch.save({
+            'state_dict' : model.state_dict(),
+            },new_param_file)
 
     # saving new parameters
     logging.info("Training took {}".format(end-start_train))
