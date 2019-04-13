@@ -198,7 +198,7 @@ def self_play_game(mcts0, mcts1):
     return data
 
 if __name__ == "__main__":
-    param_file, data_file = tools.info_generate()
+    param_file, data_file = tools.info_selfplay()
     model_class = getattr(model_module, MODEL_CLASS)
     if self_play_iteration(model_class, param_file, data_file):
         print("Data were saved to file {}.npy".format(data_file))

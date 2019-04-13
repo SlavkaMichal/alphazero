@@ -3,6 +3,7 @@ sys.path.append('..')
 from config import *
 import numpy as np
 import json
+import pdb
 from glob import glob
 import os
 from datetime import datetime
@@ -92,7 +93,6 @@ def get_rotations(data):
                 board = np.rot90(board, axes=(1,2))
                 pi    = np.rot90(pi)
 
-            print(d['r'])
             rotations.append(np.array((board, pi.reshape(-1), d['r']), dtype=dt))
 
     return np.concatenate([data, np.stack(rotations)])
@@ -111,25 +111,69 @@ def info_train():
 
     new_param_file = "{}/{}{}_{}.pyt".format(
             PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
-    if 'DATA_FILES' in os.environ:
-        data_files = os.environ['DATA_FILES'].replace(' ','').split(',')
+    if 'DATA' in os.environ:
+        data = os.environ['DATA'].split(',').strip()
     else:
-        data_files = glob("{}/{}{}_*.npy".format(
-            DATA_PATH, MODEL_CLASS, SHAPE))
+        data_dirs = glob("{}/{}{}_*".format(DATA_PATH, MODEL_CLASS, SHAPE))
+        data_dirs.sort()
+        if len(data_dirs) > 0:
+            generation = int(data_dirs[-1][-3:])
+        else:
+            raise RuntimeError("No data for training found")
 
-    data_files.sort()
-    #window = min(WINDOW[0]+(len(data_files)-4)//WINDOW[2], WINDOW[1])
-    #window *= PROC_NUM
-    #if len(data_files) - window > 0:
-    #    for f in data_files[0:len(data_files) - window]:
-    #        logging.info("Removing file {}".format(f))
-    #        os.remove(f)
+        if len(data_dirs) > 4:
+            window = min(WINDOW[0]+(generation-3)//WINDOW[2], WINDOW[1])
+            print("Window size is {}".format(window))
+            print("Number of data dirs is {}".format(len(data_dirs)))
+            if len(data_dirs) - window > 0:
+                for d in data_dirs[0:-window]:
+                    logging.info("Removing file {}".format(f))
+                    os.remove(f)
+        data = data_dirs[-window:]
 
-    data_files = [ os.path.realpath(df) for df in data_files ]
+    data_files = []
+    for d in data:
+        if not os.path.exists(d):
+            print("File or directory {} does not exist".format(d))
+            print("Excluding it from data list")
+            continue
+        if os.path.isdir(d):
+            data_files.extend(glob("{}/*.npy".format(os.path.realpath(d))))
+        else:
+            data_files.append(os.path.realpath(d))
 
     return best, new_param_file, data_files
 
-def info_generate():
+def new_generation():
+    data_dirs = glob("{}/{}{}_*/".format(DATA_PATH, MODEL_CLASS, SHAPE))
+    data_dirs.sort()
+    if len(data_dirs) == 0:
+        generation = -1
+    else:
+        generation = int(data_dirs[-1][-3:])
+    print("Last generation was: {}".format(generation))
+    data_dir = "{}/{}{}_{}_gen{:03}".format(
+            DATA_PATH,
+            MODEL_CLASS,
+            SHAPE,
+            datetime.now().strftime("%m%d_%H-%M"),
+            generation+1)
+    print("New this generation will be in {}".format(data_dir))
+    try:
+        os.mkdir(data_dir)
+    except OSError as e:
+        print("Creating directory failed")
+        print(e)
+        sys.exit(1)
+
+    if generation != -1:
+        # if it is the first generation there will be no parameter file saved yet
+        with open("{}/parameters.txt", "w+") as f:
+            f.write(get_best())
+
+    return data_dir
+
+def info_selfplay():
     """ returns best params and new data file name
         must return valid values!!
     """
@@ -149,8 +193,14 @@ def info_generate():
         best = "{}/{}{}_{}.pyt".format(
                 PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
 
-    file_name = "{}/{}{}_{}s{}".format(
-                DATA_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"), seq)
+    data_dir = glob("{}/{}{}_*/".format(DATA_PATH, MODEL_CLASS, SHAPE))
+    data_dir.sort()
+    if len(data_dir) == 0:
+        data_dir = new_generation()
+    else:
+        data_dir = data_dir[-1]
+
+    file_name = "{}/{}s{}".format(data_dir, datetime.now().strftime("%m%d_%H-%M-%S"), seq)
 
     return best, file_name
 

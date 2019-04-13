@@ -26,7 +26,7 @@ ACTION="n"
 SEQUENCE="0"
 CONFIG=""
 PARAM=""
-DATA_FILES=""
+DATA=""
 VERSUS=""
 RESTORE="false"
 
@@ -66,7 +66,7 @@ do
 		shift
 		;;
 	-d|--data)
-		DATA_FILES="$2"
+		DATA="$2"
 		shift
 		shift
 		;;
@@ -119,9 +119,9 @@ if [ "$VERSUS" != "" ]; then
 	echo "VERSUS=$CONFIG"
 	export VERSUS
 fi
-if [ "$DATA_FILES" != "" ]; then
-	echo "DATA_FILES=$CONFIG"
-	export DATA_FILES
+if [ "$DATA" != "" ]; then
+	echo "DATA=$CONFIG"
+	export DATA
 fi
 
 source env.sh $PYTHON
