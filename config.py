@@ -4,33 +4,54 @@ import os
 ##############################################################################
 #                                   general                                  #
 ##############################################################################
+# project root
+ROOT = os.path.dirname(os.path.realpath(__file__))
+# path to neural network parameters
+PARAM_PATH = "{}/parameters".format(ROOT)
+
+# path to data
+DATA_PATH = "{}/data".format(ROOT)
+
+# path to configuration backups
+CONFIG_PATH = "{}/config".format(ROOT)
+
+# path to logs
+LOG_PATH = "{}/logs".format(ROOT)
+
+# file containing path to best parameters
+PARAM_BEST = "{}/.param_best".format(ROOT)
+
+# load config
+LOAD_CONFIG = ""
+if 'CONFIG' in os.environ:
+    LOAD_CONFIG = os.environ['CONFIG']
+
+# number of self-play tasks
+PROC_NUM = 0
+if 'PROC_NUM' in os.environ:
+    PROC_NUM = os.environ['PROC_NUM']
+
+##############################################################################
+#                                neural network                              #
+##############################################################################
 # neural network to be used
 MODEL_MODULE = "model"
 MODEL_CLASS = "simplerNN"
 
-# number of self-play tasks
-PROC_NUM = 12
+# board channels
+CHANNELS = 2
 
-# path to neural network parameters
-PARAM_PATH = "{}/parameters".format(os.path.dirname(os.path.realpath(__file__)))
+# channels in convolutional layers
+CONV_CHANNELS = 16
 
-# path to data
-DATA_PATH = "{}/data".format(os.path.dirname(os.path.realpath(__file__)))
+# common convolutional layers
+FRONT_LAYER_CNT = 4
 
-# path to configuration backups
-CONFIG_PATH = "{}/config".format(os.path.dirname(os.path.realpath(__file__)))
+# policy head convolutional layer count
+POLICY_LAYER_CNT = 2
 
-# path to logs
-LOG_PATH = "{}/logs".format(os.path.dirname(os.path.realpath(__file__)))
-
-# file containing path to best parameters
-PARAM_BEST = "{}/.param_best".format(os.path.dirname(os.path.realpath(__file__)))
-
-# load config
-if 'CONFIG' in os.environ:
-    LOAD_CONFIG = os.environ['CONFIG']
-else:
-    LOAD_CONFIG = ""
+# value head convolutional layer count
+VALUE_LAYER_CNT = 2
 
 ##############################################################################
 #                                 sefl-play                                  #
@@ -62,7 +83,7 @@ EPOCHS = 10000
 LR = 0.001
 
 # batch size
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 # number of generations to train from
 # size of window is increasing by one every n generations
@@ -131,6 +152,3 @@ HEUR = False
 
 # debug output
 DEBUG = True
-
-# compile python extension
-EXTENSION = False

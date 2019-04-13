@@ -3,55 +3,42 @@ from torch.nn import functional as F
 import torch
 import pdb
 import sys
-from os.path import dirname
-sys.path.append('..')
-from config import SIZE, SHAPE
+from config import *
+
 
 class simplerNN(nn.Module):
-    def __init__(self, shape=SHAPE, input_channels=2, channels_out=16, layer_count=2):
+    def __init__(self):
         super(simplerNN, self).__init__()
 
-        self.shape = shape
-        layers = []
-        for _ in range(layer_count):
-            layers.append(nn.Conv2d(input_channels, channels_out, kernel_size=3, padding=1, bias=False))
-            input_channels = channels_out
-            layers.append(nn.BatchNorm2d(input_channels))
-            layers.append(nn.ReLU())
+        self.front = self.conv_layers(CHANNELS, CONV_CHANNELS, FRONT_LAYER_CNT)
 
-        self.front = nn.Sequential(*layers)
-
-        self.prob = nn.Sequential(
-                #nn.Conv2d(input_channels, input_channels, kernel_size=3, padding=1, bias=False),
-                #nn.BatchNorm2d(input_channels),
-                #nn.ReLU(),
-                nn.Conv2d(input_channels, input_channels, kernel_size=3, padding=1, bias=False),
-                nn.BatchNorm2d(input_channels),
-                nn.ReLU(),
-                nn.Conv2d(input_channels, 1, kernel_size=3, padding=1),
+        self.policy_conv = self.conv_layers(CONV_CHANNELS, CONV_CHANNELS, POLICY_LAYER_CNT)
+        self.policy = nn.Sequential(
+                nn.Conv2d(CONV_CHANNELS, 1, kernel_size=3, padding=1),
                 )
 
+        self.value_conv = self.conv_layers(CONV_CHANNELS, CONV_CHANNELS, VALUE_LAYER_CNT)
         self.value = nn.Sequential(
-                #nn.Conv2d(input_channels, input_channels, kernel_size=3, padding=1, bias=False),
-                #nn.BatchNorm2d(input_channels),
-                #nn.ReLU(),
-                nn.Conv2d(input_channels, input_channels, kernel_size=3, padding=1, bias=False),
-                nn.BatchNorm2d(input_channels),
-                nn.ReLU(),
-                nn.Conv2d(input_channels, 1, kernel_size=1),
-                nn.AvgPool2d(shape),
+                nn.Conv2d(CONV_CHANNELS, 1, kernel_size=1),
+                nn.AvgPool2d(SHAPE),
                 nn.Tanh()
                 )
 
+    def conv_layers(self, channels_in, channels_out, cnt):
+            layers = []
+            for _ in range(cnt):
+                layers.append(nn.Conv2d(channels_in, channels_out, kernel_size=3, padding=1, bias=False))
+                channels_in = channels_out
+                layers.append(nn.BatchNorm2d(channels_in))
+                layers.append(nn.ReLU())
+
+            return nn.Sequential(*layers)
+
     def forward(self, boards):
         # computing forward pass
-        front = self.front(boards)
-        prob  = self.prob(front)
-        prob  = F.log_softmax(prob.view(prob.shape[0],-1), dim=1)
-        value = self.value(front)
+        front  = self.front(boards)
+        policy = self.policy(self.policy_conv(front))
+        policy = F.log_softmax(policy.view(policy.shape[0],-1), dim=1)
+        value  = self.value(self.value_conv(front))
 
-        return value, prob
-
-    def predict(self, boards):
-        value, prob = self.forward(boards)
-        return value, prob.exp()
+        return value, policy
