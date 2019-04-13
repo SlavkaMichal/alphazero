@@ -147,8 +147,12 @@ if [ $DEBUG == "True" ]; then
 	echo "Creating missing directories"
 fi
 if [ ! -d "parameters" ]; then
-	echo "Creating model directory"
-	mkdir "model"
+	echo "Creating parameters directory"
+	mkdir "parameters"
+fi
+if [ ! -d "config" ]; then
+	echo "Creating parameters directory"
+	mkdir "parameters"
 fi
 if [ ! -d "data" ]; then
 	echo "Creating data directory"

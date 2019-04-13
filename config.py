@@ -77,7 +77,7 @@ TIMEOUT_EVAL = 50
 ##############################################################################
 
 # number of epochs
-EPOCHS = 10000
+EPOCHS = 5
 
 # training learning rate
 LR = 0.001
@@ -110,7 +110,9 @@ CPUCT = 4.
 ##############################################################################
 
 # installation prefix
-#PREFIX = "{}/.local".format(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+# merlin
+#PREFIX = "{}/.local".format(os.path.dirname(ROOT))
+# meta and my pc
 PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
