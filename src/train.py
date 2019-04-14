@@ -59,9 +59,11 @@ def train(model_class, param_file, new_param_file, data_files):
     data_list = [ np.load(d) for d in data_files ]
 
     data = np.concatenate(data_list)
+    logging.info("Original data size {}".format(data.size))
     # get all possible board rotations and remove duplicate board positions
-    #data = tools.get_unique(tools.get_rotations(data))
-    data = tools.get_unique(data)
+    data = tools.get_unique(tools.get_rotations(data))
+    logging.info("Augmented data size {}".format(data.size))
+    #data = tools.get_unique(data)
     del data_list
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
@@ -70,9 +72,14 @@ def train(model_class, param_file, new_param_file, data_files):
     criterion_v  = torch.nn.MSELoss()
 
     # step in which log will be created
-    view_step = data.size//20
-    logging.info("Data size {} divided into {} batches of size {}".
-            format(data.size, data.size//BATCH_SIZE, BATCH_SIZE))
+    iterations = data.size//BATCH_SIZE
+    if iterations < 25:
+        view_step = 1
+    else:
+        view_step = iterations//20 # progress will be displayed 20times per epoch
+
+    logging.info("Iterations per epoch {}".format(iterations))
+    logging.info("Batch size {}".format(BATCH_SIZE))
     start_train = datetime.now()
     logging.info("Starting at {}".format(start_train))
 
@@ -82,9 +89,9 @@ def train(model_class, param_file, new_param_file, data_files):
         acc_loss  = 0
         it = 0
         start_epoch = datetime.now()
-        logging.info("Running epoch {}/{}".format(e,EPOCHS))
+        logging.info("Running epoch {}/{}".format(e+1,EPOCHS))
         acc_batchtime = None
-        for i in range(data.size//BATCH_SIZE):
+        for i in range(iterations):
             batch_ids = np.random.choice(data.size, BATCH_SIZE)
             batch_input   = torch.from_numpy(data[batch_ids]['board'])
             batch_vlabels = torch.from_numpy(data[batch_ids]['r']).reshape(-1, 1, 1, 1)
@@ -111,8 +118,9 @@ def train(model_class, param_file, new_param_file, data_files):
             loss.backward()
             optimizer.step()
             if i % view_step == view_step -1:
-                logging.info("step:\n\tVALUE loss:\t{}\n\tPI loss:\t{}\n\tTOTAL loss:\t{}".
-                        format( vloss.item(),ploss.item(), loss.item()))
+                logging.info("E:{}/{} I:{}/{} AccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss))
+                logging.info("E:{}/{} I:{}/{} AccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss))
+                logging.info("E:{}/{} I:{}/{} AccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss))
 
         # end of epoch
         end = datetime.now()
@@ -143,3 +151,5 @@ if __name__ == "__main__":
         print("New model parameters were saved to {}".format(new_param_file))
     else:
         print("Training failed, check for errors {}/train_{}.log".format(LOG_PATH, new_param_file))
+    if not tools.dry_run():
+        tools.init_generation()

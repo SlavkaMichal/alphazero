@@ -172,7 +172,7 @@ def init_generation():
     if len(data_dirs) == 0:
         generation = -1
     else:
-        generation = int(data_dirs[-1][-3:])
+        generation = int(data_dirs[-1].replace('/','')[-3:])
     print("Last generation was: {}".format(generation))
     data_dir = "{}/{}{}_{}_gen{:03}".format(
             DATA_PATH,
@@ -190,7 +190,7 @@ def init_generation():
 
     if generation != -1:
         # if it is the first generation there will be no parameter file saved yet
-        with open("{}/parameters.txt", "w+") as f:
+        with open("{}/parameters.txt".format(data_dir), "w+") as f:
             f.write(get_best())
 
     return data_dir

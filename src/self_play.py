@@ -190,7 +190,7 @@ def self_play_game(mcts0, mcts1):
     return data
 
 if __name__ == "__main__":
-    param_file = tools.get_param()
+    param_file = tools.get_params()
     if param_file is None:
         param_file = tools.get_new_param()
     data_file  = tools.get_new_data()
