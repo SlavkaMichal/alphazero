@@ -61,7 +61,7 @@ VALUE_LAYER_CNT = 2
 TRAIN_SAMPLES = 10000000
 
 # max generating time
-TIMEOUT_SELF_PLAY = 1
+TIMEOUT_SELF_PLAY = 15
 
 ##############################################################################
 #                                 evaluation                                 #
@@ -75,9 +75,11 @@ TIMEOUT_EVAL = 50
 ##############################################################################
 #                                    training                                #
 ##############################################################################
-
 # number of epochs
-EPOCHS = 5
+EPOCHS = 4
+
+# augment data with rotations of board
+ROTATIONS = True
 
 # training learning rate
 LR = 0.001

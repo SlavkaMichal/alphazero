@@ -61,7 +61,9 @@ def train(model_class, param_file, new_param_file, data_files):
     data = np.concatenate(data_list)
     logging.info("Original data size {}".format(data.size))
     # get all possible board rotations and remove duplicate board positions
-    data = tools.get_unique(tools.get_rotations(data))
+    if ROTATIONS:
+        data = tools.get_rotations(data)
+    data = tools.get_unique(data)
     logging.info("Augmented data size {}".format(data.size))
     #data = tools.get_unique(data)
     del data_list
@@ -118,16 +120,16 @@ def train(model_class, param_file, new_param_file, data_files):
             loss.backward()
             optimizer.step()
             if i % view_step == view_step -1:
-                logging.info("E:{}/{} I:{}/{} AccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss))
-                logging.info("E:{}/{} I:{}/{} AccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss))
-                logging.info("E:{}/{} I:{}/{} AccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss))
+                logging.info("E:{}/{} I:{}/{} AccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss/it))
+                logging.info("E:{}/{} I:{}/{} AccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss/it))
+                logging.info("E:{}/{} I:{}/{} AccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_loss/it))
 
         # end of epoch
         end = datetime.now()
         logging.info("Epoch {} took {}".format(e, end-start_epoch))
         logging.info("Epoch:{} AccValue loss: {}".format(e, acc_vloss/it))
-        logging.info("Epoch:{} AccPi loss:{}".format(e, acc_vloss/it))
-        logging.info("Epoch:{} Total loss:{}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} AccPi loss:{}".format(e, acc_ploss/it))
+        logging.info("Epoch:{} Total loss:{}".format(e, acc_loss/it))
         logging.info("Epoch:{} checkpoint".format(new_param_file))
         torch.save({
             'state_dict' : model.state_dict(),

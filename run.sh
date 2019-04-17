@@ -24,6 +24,7 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
 PYTHON=$(which python)
 ACTION="n"
 CONFIG=""
+source env.sh $PYTHON
 
 while [[ $# -gt 0 ]]
 do
@@ -93,8 +94,13 @@ do
 		else
 			echo "Temporary configuration file does not exists"
 		fi
-		exit
 		shift
+		exit
+		;;
+	-g|--generation)
+		$PYTHON -c "import src.tools as t; t.init_generation()"
+		shift
+		exit
 		;;
 	-n|--dry-run)
 		DRY_RUN="true"
@@ -110,8 +116,6 @@ do
 esac
 done
 
-source env.sh $PYTHON
-
 if [ $ACTION == "n" ]; then
 	echo -e "Error: No action giveni\n"
 	echo -e $HELP
@@ -119,12 +123,14 @@ if [ $ACTION == "n" ]; then
 elif [ $ACTION == "s" ]; then
 	echo "running $PYTHON self-play.py"
 	$PYTHON src/self_play.py
+	# restore cofig if a different one was used
 	if [ "$CONFIG" != "" ]; then
 		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
 		rm 'config/tmp_conf.py'
 	fi
 elif [ $ACTION == "e" ]; then
 	echo "running $PYTHON eval.py"
+	# restore cofig if a different one was used
 	$PYTHON "src/eval.py" && echo "Success"
 	if [ "$CONFIG" != "" ]; then
 		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"
@@ -132,6 +138,7 @@ elif [ $ACTION == "e" ]; then
 	fi
 elif [ $ACTION == "t" ]; then
 	echo "running $PYTHON train.py"
+	# restore cofig if a different one was used
 	$PYTHON src/train.py
 	if [ "$CONFIG" != "" ]; then
 		$PYTHON -c "import src.tools as t; t.config_load('config/tmp_conf.py')"

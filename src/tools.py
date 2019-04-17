@@ -3,6 +3,7 @@ sys.path.append('..')
 from config import *
 import numpy as np
 import json
+import tarfile
 import pdb
 from glob import glob
 import os
@@ -147,8 +148,9 @@ def get_data():
             print("Number of data dirs is {}".format(len(data)))
             if len(data) - window > 0:
                 for d in data[0:-window]:
-                    logging.info("Removing file {}".format(f))
-                    os.remove(f)
+                    # make gzip and remove
+                    print("Removing file {}".format(d))
+                    rm(d)
             data = data[-window:]
 
     data_files = []
@@ -163,6 +165,25 @@ def get_data():
             data_files.append(os.path.realpath(d))
 
     return data_files
+
+def rm(files):
+    if type(files) is list:
+        if len(files) < 1:
+            raise RuntimeError("RM invalid argument")
+        name = os.path.basename(files[0])
+    else:
+        name = os.path.basename(files)
+        files = [files]
+    with tarfile.open("{}/{}.tgz".format(DATA_PATH, name), "w:gz") as tar:
+        for f in files:
+            tar.add(f, recursive=True)
+            if os.path.isfile(f):
+                os.remove(f)
+            elif os.path.isdir(f):
+                shutil.rmtree(f)
+            else:
+                print("Could not remove {}. Not dir or file".format(f))
+
 
 def init_generation():
     """ creats a directory for new generation of data
