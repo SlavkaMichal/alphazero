@@ -37,7 +37,7 @@ public:
 	Node();
 	~Node();
 private:
-	std::mutex mutex;
+	std::mutex node_mutex;
 	std::array<std::unique_ptr<Node>, SIZE> child;
 	int child_cnt;
 	std::array<int, SIZE>   childN;

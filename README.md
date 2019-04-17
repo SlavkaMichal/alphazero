@@ -22,14 +22,36 @@ accordingly
 
 
 ## TODO:
+* evaluate also on evaluation dataset
+* how to deal with old data:
+	1. create separate directory for each generation
+		* folder would be named [model name][SHAPE]_[ts]_[generation]
+* move getters and setters to lambda functions in module.cpp
+* replace run.sh with python script
+* how to deal with saved parameters and changes in architecture
+	* maybe the best would be to ignore it and if loading fails
+	  use initialisation parameters
+* move pytorch and pybind to project root
+### TODO when nothing else come to mind
+* have a look at test, fix them add new
 * create evaluation thread
 	* node that needs to be evaluated will be locked board and evaluating
 will be not blocking right away but will have the node lock until nn is called
-	*
 * check if cuda works - I am not able to compile pytorch with cuda
 * cache (maybe sometime)
 
 ## Notes:
+* `python: ../nptl/pthread_mutex_lock.c:352: __pthread_mutex_lock_full: Assertion INTERNAL_SYSCALL_ERRNO (e, __err) != ESRCH || !robust' failed.`
+	* this means that the thread that takes lock dies and does not release
+it, but I use scoped locks so where's the catch?
+* `94635 Illegal instruction`
+	* probably cpu does not support binary
+* `terminate called after throwing an instance of 'std::system_error'`
+	* seems this is occures during calls to pytorch lib
+* `python: ../nptl/pthread_mutex_lock.c:117: __pthread_mutex_lock: Assertion mutex->__data.__owner == 0' failed.`
+
+
+
 * if there are segfaults between cpp/python interface try smart pointers
 
 ## TRAINING PIPELINE:

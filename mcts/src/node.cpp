@@ -26,7 +26,7 @@ Node::
 void Node::
 set_prior(torch::Tensor p, double *dir)
 {
-	std::lock_guard<std::mutex> guard(mutex);
+	std::lock_guard<std::mutex> guard(node_mutex);
 	float *ptr = (float *)p.data_ptr();
 	if (nodeN != -1)
 		return;
@@ -45,7 +45,7 @@ set_prior(torch::Tensor p, double *dir)
 void Node::
 set_prior(State *state, double* dir)
 {
-	std::lock_guard<std::mutex> guard(mutex);
+	std::lock_guard<std::mutex> guard(node_mutex);
 	float sum = 0.;
 	// check if node wasn't already explored
 	if (nodeN != -1)
@@ -67,7 +67,7 @@ set_prior(State *state, double* dir)
 void Node::
 backpropagate(int action, float value)
 {
-	std::lock_guard<std::mutex> guard(mutex);
+	std::lock_guard<std::mutex> guard(node_mutex);
 	/* restore virtual loss */
 	childW[action] += 1;
 	childW[action] += value;
@@ -80,7 +80,7 @@ select(State *state, double cpuct)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
-	std::lock_guard<std::mutex> guard(mutex);
+	std::lock_guard<std::mutex> guard(node_mutex);
 	int best_a = -1;
 	double u;
 	double best_u = -INFINITY;
