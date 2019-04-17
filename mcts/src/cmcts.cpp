@@ -4,6 +4,7 @@ namespace py = pybind11;
 
 Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 	cpuct(cpuct),
+	cuda(0),
 	threads(0)
 {
 	root_node = new Node();
@@ -63,6 +64,9 @@ void         Cmcts::set_alpha(double alpha) { std::fill(this->alpha, this->alpha
 
 const std::string Cmcts::get_params() const                 { return param_name; }
 void              Cmcts::set_params(std::string &file_name) { this->param_name = file_name; }
+
+const int Cmcts::get_cuda() const { return cuda; }
+void      Cmcts::set_cuda(int cuda) { if (cuda != 1 || cuda != 0) throw std::runtime_error("Invalid value"); this->cuda = cuda; }
 
 void Cmcts::set_seed(unsigned long int seed) { gsl_rng_set(r, time(NULL)+seed); }
 const int Cmcts::get_move_cnt() const { return state->move_cnt; }
@@ -134,9 +138,8 @@ Cmcts::worker(int n)
 	}
 	State *search_state = new State(state);
 
-#ifdef WITH_CUDA
-	module->to(at::kCUDA);
-#endif
+	if (this->cuda)
+		module->to(at::kCUDA);
 
 	for (int i = 0; i < n; i++){
 		search(search_state, module);
@@ -158,7 +161,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 	std::vector<torch::jit::IValue> input;
 	std::vector<int64_t> sizes = {1, 2, SHAPE, SHAPE};
 	auto options = torch::TensorOptions().dtype(torch::kChar);
-
+	std::vector<torch::jit::IValue> output;
 	/* TODO
 	   is_end vrati -1 ak player prehral 1 ak player vyhral
 	   0 ak hra pokracuje
@@ -183,10 +186,9 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 						at::IntList(sizes),
 						options);
 				tensor = tensor.toType(at::kFloat); // this will copy data
-#ifdef WITH_CUDA
-				tensor.to(at::kCUDA);
+				if (this->cuda)
+					tensor.to(at::kCUDA);
 				// cuda synchronize??
-#endif
 				input.push_back(tensor);
 				/* evaluate model */
 				auto output = module->forward(input).toTuple();
@@ -205,15 +207,23 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 					at::IntList(sizes),
 					options);
 			tensor = tensor.toType(at::kFloat); //this will make a copy
-#ifdef WITH_CUDA
-			tensor.to(at::kCUDA);
-#endif
+			if (this->cuda)
+				tensor.to(at::kCUDA);
 			input.push_back(tensor);
 			/* evaluate model */
-			auto output = module->forward(input).toTuple();
+			try {
+				output = module->forward(input).toTuple()->elements();
+			}
+			catch (const std::system_error& e) {
+				// this executes if f() throws std::underflow_error (base class rule)
+				std::cout << "s8:" << std::this_thread::get_id() << std::endl;
+				std::cout << state->repr() << std::endl;
+				std::cout << current->repr() << std::endl;
+				return;
+			}
 
-			value = -output->elements()[0].toTensor().to(at::kCPU).item<float>();
-			current->set_prior(output->elements()[1].toTensor().to(at::kCPU), dir_noise);
+			value = -output[0].toTensor().to(at::kCPU).item<float>();
+			current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise);
 #endif
 			break;
 		}

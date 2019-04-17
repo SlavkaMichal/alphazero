@@ -19,6 +19,10 @@ PYBIND11_MODULE(cmcts, m) {
 			&Cmcts::get_params,
 			&Cmcts::set_params,
 			"Passes to MCTS funtion to predict prior probability")
+	.def_property("cuda",
+			&Cmcts::get_cuda,
+			&Cmcts::set_cuda,
+			"Evaluate network on graphics card")
 	.def_property("alpha",
 			&Cmcts::get_alpha,
 			&Cmcts::set_alpha,

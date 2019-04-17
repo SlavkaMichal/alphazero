@@ -41,6 +41,8 @@ public:
 	const std::string get_params() const;
 	void              set_threads(int threads);
 	const int         get_threads() const;
+	void              set_cuda(int cuda);
+	const int         get_cuda() const;
 	void              set_alpha(double alpha);
 	const double      get_alpha() const;
 	void              set_player(int player);
@@ -77,6 +79,7 @@ private:
 	gsl_rng *r;
 	std::string param_name; // file from which parameters will be loaded
 	int threads;            // number of threads
+	int cuda;            // number of threads
 };
 
 #endif
