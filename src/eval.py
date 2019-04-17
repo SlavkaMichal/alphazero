@@ -144,7 +144,7 @@ def eval_models(model_class, param_best, param_latest):
 
     logging.info("Total time {}".format(end-start_eval))
     logging.info("Latest win/loos ratio: {}".format(wins_latest/(wins_latest+wins_best)))
-    if wins_latest/(wins_latest+wins_best) > 0.54:
+    if wins_latest/(wins_latest+wins_best) >= EVAL_TRESHOLD:
         logging.info("Setting new best to {}".format(param_latest))
         tools.set_best(param_latest)
     else:
@@ -157,7 +157,7 @@ def eval_game(mcts_first, mcts_second):
     for i in range(SIZE):
         mcts_first.simulate(SIMS)
         pi = mcts_first.get_prob()
-        move = np.random.choice(pi.size, p=pi)
+        move = pi.argmax()
         mcts_first.make_move(move)
         mcts_second.make_move(move)
 
@@ -167,7 +167,7 @@ def eval_game(mcts_first, mcts_second):
 
         mcts_second.simulate(SIMS)
         pi = mcts_second.get_prob()
-        move = np.random.choice(pi.size, p=pi)
+        move = pi.argmax()
         mcts_first.make_move(move)
         mcts_second.make_move(move)
 

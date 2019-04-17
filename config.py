@@ -72,6 +72,9 @@ EVAL_GAMES = 50
 # max evaluation time in minutes
 TIMEOUT_EVAL = 50
 
+# percentual wins for new neural network to replace current best
+EVAL_TRESHOLD = 0.6
+
 ##############################################################################
 #                                    training                                #
 ##############################################################################
@@ -104,6 +107,9 @@ SIMS = 1000
 # currently using default everywhere
 #ALPHA = 0.1
 
+# number of moves after which temperature is set from 1 to infinitesimal value
+TAU = 10
+
 # c constant in PUCT algorithm
 CPUCT = 4.
 
@@ -113,9 +119,9 @@ CPUCT = 4.
 
 # installation prefix
 #  meta and merlin
-PREFIX = "{}/.local".format(os.path.dirname(ROOT))
+#PREFIX = "{}/.local".format(os.path.dirname(ROOT))
 #my pc
-#PREFIX = "{}/.local".format(os.environ['HOME'])
+PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
 INSTALL_PYTORCH = False
