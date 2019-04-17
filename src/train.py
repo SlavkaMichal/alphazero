@@ -62,9 +62,18 @@ def train(model_class, param_file, new_param_file, data_files):
     logging.info("Original data size {}".format(data.size))
     # get all possible board rotations and remove duplicate board positions
     if ROTATIONS:
+        logging.info("Augmenting data")
+        logging.info("Original data size {}".format(data.size))
         data = tools.get_rotations(data)
+        logging.info("Augmented data size {}".format(data.size))
     data = tools.get_unique(data)
-    logging.info("Augmented data size {}".format(data.size))
+    logging.info("Data size {}".format(data.size))
+    np.random.shuffle(data)
+    validation_size = int(data.size*0.05)
+    validation = data[:validation_size]
+    data = data[validation_size:]
+    logging.info("Training data size {}".format(data.size))
+    logging.info("Validation data size {}".format(validation.size))
     #data = tools.get_unique(data)
     del data_list
 
@@ -93,6 +102,7 @@ def train(model_class, param_file, new_param_file, data_files):
         start_epoch = datetime.now()
         logging.info("Running epoch {}/{}".format(e+1,EPOCHS))
         acc_batchtime = None
+        model.train()
         for i in range(iterations):
             batch_ids = np.random.choice(data.size, BATCH_SIZE)
             batch_input   = torch.from_numpy(data[batch_ids]['board'])
@@ -124,12 +134,54 @@ def train(model_class, param_file, new_param_file, data_files):
                 logging.info("E:{}/{} I:{}/{} AccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss/it))
                 logging.info("E:{}/{} I:{}/{} AccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_loss/it))
 
+        logging.info("Epoch:{} AccPi loss:{}".format(e, acc_ploss/it))
+        logging.info("Epoch:{} AccValue loss: {}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} Total loss:{}".format(e, acc_loss/it))
+
+        # validation
+        acc_vloss = 0
+        acc_ploss = 0
+        acc_loss  = 0
+        it = 0
+        start_valid = datetime.now()
+        logging.info("Running validation of epoch {}/{}".format(e+1,EPOCHS))
+        acc_batchtime = None
+        model.eval()
+        for i in range(validation.size//BATCH_SIZE):
+            batch_ids = np.random.choice(validation.size, BATCH_SIZE)
+            batch_input   = torch.from_numpy(validation[batch_ids]['board'])
+            batch_vlabels = torch.from_numpy(validation[batch_ids]['r']).reshape(-1, 1, 1, 1)
+            batch_plabels = torch.from_numpy(validation[batch_ids]['pi'])
+
+            if cuda:
+                batch_input.cuda()
+                batch_vlabels.cuda()
+                batch_plabels.cuda()
+            with torch.no_grad():
+                v, p = model(batch_input)
+
+            # computing loss
+            vloss = criterion_v(v, batch_vlabels)
+            ploss = criterion_pi(p, (batch_plabels+1e-15))
+            loss = vloss + ploss
+
+            it += 1
+            acc_vloss += vloss.item()
+            acc_ploss += ploss.item()
+            acc_loss  += loss.item()
+
+            # backpropagation
+            if i % view_step == view_step -1:
+                logging.info("E:{}/{} I:{}/{} ValidAccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss/it))
+                logging.info("E:{}/{} I:{}/{} ValidAccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss/it))
+                logging.info("E:{}/{} I:{}/{} ValidAccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_loss/it))
+
         # end of epoch
         end = datetime.now()
         logging.info("Epoch {} took {}".format(e, end-start_epoch))
-        logging.info("Epoch:{} AccValue loss: {}".format(e, acc_vloss/it))
-        logging.info("Epoch:{} AccPi loss:{}".format(e, acc_ploss/it))
-        logging.info("Epoch:{} Total loss:{}".format(e, acc_loss/it))
+        logging.info("Epoch:{} ValidAccPi    loss:{}".format(e, acc_ploss/it))
+        logging.info("Epoch:{} ValidAccValue loss: {}".format(e, acc_vloss/it))
+        logging.info("Epoch:{} ValidTotal    loss:{}".format(e, acc_loss/it))
         logging.info("Epoch:{} checkpoint".format(new_param_file))
         torch.save({
             'state_dict' : model.state_dict(),

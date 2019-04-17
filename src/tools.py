@@ -135,7 +135,7 @@ def get_data():
     if 'DATA' in os.environ:
         data = os.environ['DATA'].split(',').strip()
     else:
-        data = glob("{}/{}{}_*".format(DATA_PATH, MODEL_CLASS, SHAPE))
+        data = glob("{}/{}{}_*[!.tgz]".format(DATA_PATH, MODEL_CLASS, SHAPE))
         data.sort()
         if len(data) > 0:
             generation = int(data[-1][-3:])
@@ -158,6 +158,8 @@ def get_data():
         if not os.path.exists(d):
             print("File or directory {} does not exist".format(d))
             print("Excluding it from data list")
+            continue
+        if "tgz" in d:
             continue
         if os.path.isdir(d):
             data_files.extend(glob("{}/*.npy".format(os.path.realpath(d))))
