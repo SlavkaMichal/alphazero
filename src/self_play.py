@@ -146,12 +146,13 @@ def self_play_game(mcts0, mcts1):
         mcts0.simulate(SIMS)
         pi = mcts0.get_prob()
         board = mcts0.get_board()
+        if (i > TAU):
+            move = pi.argmax()
+            pi[:] = 0
+            pi[move] = 1
+        else:
+            move = np.random.choice(pi.size, p=pi)
         data0.append(np.array((board, pi, -1), dtype=dt))
-        move = np.random.choice(pi.size, p=pi)
-        #logging.info("Player {}".format(mcts0.player))
-        #logging.info("Move {}".format(move))
-        #logging.info("Board {}".format(tools.repr_board(board)))
-        #logging.info("Pi {}".format(tools.repr_pi(pi)))
         mcts0.make_move(move)
         mcts1.make_move(move)
 
@@ -161,12 +162,13 @@ def self_play_game(mcts0, mcts1):
         mcts1.simulate(SIMS)
         pi = mcts1.get_prob()
         board = mcts1.get_board()
+        if (i > TAU):
+            move = pi.argmax()
+            pi[:] = 0
+            pi[move] = 1
+        else:
+            move = np.random.choice(pi.size, p=pi)
         data1.append(np.array((board, pi, -1), dtype=dt))
-        move = np.random.choice(pi.size, p=pi)
-        #logging.info("Player {}".format(mcts0.player))
-        #logging.info("Move {}".format(move))
-        #logging.info("Board {}".format(tools.repr_board(board)))
-        #logging.info("Pi {}".format(tools.repr_pi(pi)))
         mcts0.make_move(move)
         mcts1.make_move(move)
 

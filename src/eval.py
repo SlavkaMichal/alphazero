@@ -157,7 +157,10 @@ def eval_game(mcts_first, mcts_second):
     for i in range(SIZE):
         mcts_first.simulate(SIMS)
         pi = mcts_first.get_prob()
-        move = np.random.choice(pi.size, p=pi)
+        if (i > TAU):
+            move = pi.argmax()
+        else:
+            move = np.random.choice(pi.size, p=pi)
         mcts_first.make_move(move)
         mcts_second.make_move(move)
 
@@ -167,7 +170,10 @@ def eval_game(mcts_first, mcts_second):
 
         mcts_second.simulate(SIMS)
         pi = mcts_second.get_prob()
-        move = np.random.choice(pi.size, p=pi)
+        if (i > TAU):
+            move = pi.argmax()
+        else:
+            move = np.random.choice(pi.size, p=pi)
         mcts_first.make_move(move)
         mcts_second.make_move(move)
 
