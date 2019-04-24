@@ -1,8 +1,7 @@
 import sys
 sys.path.append('..')
-from config import *
+from general_config import *
 from importlib import import_module
-model_module = import_module(MODEL_MODULE)
 import cmcts
 import pdb
 import glob
@@ -14,7 +13,7 @@ from tools import rand_uint32
 import tools
 from datetime import datetime
 
-def self_play_iteration(model_class, param_file=None, data_file=None):
+def self_play_iteration(param_file=None, data_file=None):
     logging.basicConfig(format='%(levelname)s: %(message)s',
             filename="{}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')),
             level=logging.DEBUG)
@@ -24,6 +23,12 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
         print(tools.self_play_config())
     logging.info(tools.self_play_config())
 
+    config = tools.get_param_conf()
+    print(config.CPUCT)
+    print(CPUCT)
+    sys.exit()
+    model_module = import_module(param_conf.MODEL_MODULE)
+    model_class = getattr(model_module, param_conf.MODEL_CLASS)
     model = model_class()
 
     if os.path.isfile(param_file):
@@ -47,9 +52,9 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
 
     jit_model_name = "{}/tmp_{}{}.pt".format(
             os.path.dirname(os.path.realpath(__file__)),
-            os.path.basename(data_file).replace("{MODEL_CLASS}_", ''),
+            os.path.basename(data_file).replace("{param_conf.MODEL_CLASS}_", ''),
             os.path.basename(param_file).replace(".pyt",''))
-    example = torch.rand(1,2,SHAPE,SHAPE)
+    example = torch.rand(1, 2, SHAPE, SHAPE)
 
     if CUDA:
         example.cuda()
@@ -63,13 +68,13 @@ def self_play_iteration(model_class, param_file=None, data_file=None):
     logging.info("Saving traced script to {}".format(jit_model_name))
     traced_script_module.save(jit_model_name)
 
-    logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
-    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    logging.info("MCTS initialised with alpha default, cpuct {}".format(param_conf.CPUCT))
+    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=param_conf.CPUCT)
     mcts0.set_alpha_default()
     mcts0.set_threads(THREADS)
     mcts0.set_params(jit_model_name)
 
-    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=param_conf.CPUCT)
     mcts1.set_alpha_default()
     mcts1.set_threads(THREADS)
     mcts1.set_params(jit_model_name)
@@ -142,11 +147,11 @@ def self_play_game(mcts0, mcts1):
 
     dt = np.dtype([('board', 'f4', (2,SHAPE,SHAPE)), ('pi', 'f4', (SIZE,)), ('r', 'f4')])
 
-    for i in range(SIZE):
-        mcts0.simulate(SIMS)
+    for i in range(param_conf.SIZE):
+        mcts0.simulate(param_conf.SIMS)
         pi = mcts0.get_prob()
         board = mcts0.get_board()
-        if (i > TAU):
+        if (i > param_conf.TAU):
             move = pi.argmax()
             pi[:] = 0
             pi[move] = 1
@@ -159,10 +164,10 @@ def self_play_game(mcts0, mcts1):
         if mcts0.winner != -1:
             break
 
-        mcts1.simulate(SIMS)
+        mcts1.simulate(param_conf.SIMS)
         pi = mcts1.get_prob()
         board = mcts1.get_board()
-        if (i > TAU):
+        if (i > param_conf.TAU):
             move = pi.argmax()
             pi[:] = 0
             pi[move] = 1
@@ -196,8 +201,7 @@ if __name__ == "__main__":
     if param_file is None:
         param_file = tools.get_new_params()
     data_file  = tools.get_new_data()
-    model_class = getattr(model_module, MODEL_CLASS)
-    if self_play_iteration(model_class, param_file, data_file):
+    if self_play_iteration(param_file, data_file):
         print("Data were saved to file {}.npy".format(data_file))
     else:
         print("Generating data failed, check for errors {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))

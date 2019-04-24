@@ -11,6 +11,8 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
                           \t\t\t\tif -e is specified -v is required\n\n
   -v, --versus=[PARAM FILE]\tmodel parameters that will be used for evaluation
                            \t\t\t\tagainst other supplied parameters\n
+  -a  --conf-param=[PARAM FILE]
+  -b  --conf-versus=[PARAM FILE]
   -d, --data=[DATA LIST]\t\tcoma-separated list of data files, NO SPACES can be used\n
   -c, --config=[CONFIG NAME]\tload configuration file and architecture,\n
                             \t\t\t\tif in combination with --train original configuration will be restored\n\n
@@ -64,6 +66,20 @@ do
 		VERSUS="$2"
 		echo "VERSUS=$VERSUS"
 		export VERSUS
+		shift
+		shift
+		;;
+	-a|--conf-param)
+		CONF_PARAM="$2"
+		echo "CONF_PARAM=$CONF_PARAM"
+		export CONF_PARAM
+		shift
+		shift
+		;;
+	-b|--conf-versus)
+		CONF_VERSUS="$2"
+		echo "CONF_VERSUS=$CONF_VERSUS"
+		export CONF_VERSUS
 		shift
 		shift
 		;;

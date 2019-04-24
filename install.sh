@@ -150,7 +150,7 @@ if [ ! -d "parameters" ]; then
 	echo "Creating parameters directory"
 	mkdir "parameters"
 fi
-if [ ! -d "config" ]; then
+if [ ! -d "conf" ]; then
 	echo "Creating parameters directory"
 	mkdir "parameters"
 fi

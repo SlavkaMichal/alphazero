@@ -1,6 +1,7 @@
 import sys
 sys.path.append('..')
-from config import *
+from general_config import *
+import general_config as cfg
 import numpy as np
 import json
 import tarfile
@@ -8,6 +9,7 @@ import pdb
 from glob import glob
 import os
 from datetime import datetime
+from importlib import import_module
 import torch
 import shutil
 
@@ -103,8 +105,9 @@ def get_rotations(data):
 def get_new_params():
     """ returns file name where new parameters will be saved
     """
+    conf = get_param_conf()
     params = "{}/{}{}_{}.pyt".format(
-                PARAM_PATH, MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
+                PARAM_PATH, conf.MODEL_CLASS, SHAPE, datetime.now().strftime("%m%d_%H-%M-%S"))
     return params
 
 def get_params():
@@ -133,10 +136,11 @@ def get_data():
     """ returns list of filenames containing data for training
         also removes obsolete data
     """
+    conf = get_param_conf()
     if 'DATA' in os.environ:
         data = os.environ['DATA'].split(',').strip()
     else:
-        data = glob("{}/{}{}_*[!.tgz]".format(DATA_PATH, MODEL_CLASS, SHAPE))
+        data = glob("{}/{}{}_*[!.tgz]".format(DATA_PATH, conf.MODEL_CLASS, SHAPE))
         data.sort()
         if len(data) > 0:
             generation = int(data[-1][-3:])
@@ -191,7 +195,8 @@ def rm(files):
 def init_generation():
     """ creats a directory for new generation of data
     """
-    data_dirs = glob("{}/{}{}_*/".format(DATA_PATH, MODEL_CLASS, SHAPE))
+    conf = get_param_conf()
+    data_dirs = glob("{}/{}{}_*/".format(DATA_PATH, conf.MODEL_CLASS, SHAPE))
     data_dirs.sort()
     if len(data_dirs) == 0:
         generation = -1
@@ -200,7 +205,7 @@ def init_generation():
     print("Last generation was: {}".format(generation))
     data_dir = "{}/{}{}_{}_gen{:03}".format(
             DATA_PATH,
-            MODEL_CLASS,
+            conf.MODEL_CLASS,
             SHAPE,
             datetime.now().strftime("%m%d_%H-%M"),
             generation+1)
@@ -224,13 +229,14 @@ def get_new_data():
     """
     # if self-play is runnig in multiple processes
     # setting sequence number will avoid name colisions
+    conf = get_param_conf()
     if 'SEQUENCE' in os.environ:
         seq = os.environ['SEQUENCE']
     else:
         seq = 0
 
     # finding directory where will be data saved
-    data_dir = glob("{}/{}{}_*/".format(DATA_PATH, MODEL_CLASS, SHAPE))
+    data_dir = glob("{}/{}{}_*/".format(DATA_PATH, conf.MODEL_CLASS, SHAPE))
     data_dir.sort()
     if len(data_dir) == 0:
         data_dir = init_generation()
@@ -253,8 +259,9 @@ def dry_run():
 def get_latest():
     """ returns latest parameters
     """
+    conf = get_param_conf()
     param_files = glob("{}/{}{}_*.pyt".format(
-        PARAM_PATH, MODEL_CLASS, SHAPE))
+        PARAM_PATH, conf.MODEL_CLASS, conf.SHAPE))
     if len(param_files) == 0:
         return None
 
@@ -319,6 +326,7 @@ def init_param_file():
     open(PARAM_BEST, 'a').close()
 
 def self_play_config():
+    conf = get_param_conf()
     s = ""
     s += "Number of training samples to generate: {}\n".format(TRAIN_SAMPLES)
     s += "Timeout for self play: {} minutes\n".format(TIMEOUT_SELF_PLAY)
@@ -331,28 +339,40 @@ def self_play_config():
     return s
 
 def train_config():
+    conf = get_param_conf()
     s = ""
     s += "Data source: {}\n".format(DATA_PATH)
     s += "Parameters loaded from: {}\n".format(PARAM_PATH)
-    s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Model from: {}.{}\n".format(conf.MODEL_MODULE, conf.MODEL_CLASS)
     s += "Torch from: {}\n".format(torch.__file__)
-    s += "Learning rate: {}\n".format(LR)
-    s += "Epochs: {}\n".format(EPOCHS)
-    s += "Batch size: {}\n".format(BATCH_SIZE)
+    s += "Learning rate: {}\n".format(conf.LR)
+    s += "Epochs: {}\n".format(conf.EPOCHS)
+    s += "Batch size: {}\n".format(conf.BATCH_SIZE)
     s += "Starting window size: {}\n".format(WINDOW[0])
     s += "Max window size: {}\n".format(WINDOW[1])
     s += "Window size incremented every {} generation\n".format(WINDOW[2])
     return s
 
 def eval_config():
+    conf1 = get_param_conf()
     s = ""
     s += "Parameters loaded from: {}\n".format(PARAM_PATH)
-    s += "Model from: {}.{}\n".format(MODEL_MODULE, MODEL_CLASS)
+    s += "Model1 from: {}.{}\n".format(conf1.MODEL_MODULE, conf1.MODEL_CLASS)
     s += "Torch from: {}\n".format(torch.__file__)
     s += "MCTS number of threads: {}\n".format(THREADS)
     s += "Number of games: {}\n".format(EVAL_GAMES)
     s += "Timeout: {} minutes\n".format(EVAL_GAMES)
     return s
+
+def get_param_conf():
+    if LOAD_CONFIG_PARAM:
+        if not os.path.isfile(LOAD_CONFIG_PARAM):
+            LOAD_CONFIG_PARAM = "{}/{}".format(CONFIG_PATH, os.path.basename(LOAD_CONFIG_PARAM))
+        if not os.path.isfile(LOAD_CONFIG_PARAM):
+            raise RuntimeError("Configuration file {} could not be found".format(os.path.basename(LOAD_CONFIG_PARAM)))
+        return import_module(LOAD_CONFIG_PARAM.replace(".py",''))
+    else:
+        return import_module('config')
 
 def config_load(conf_file=LOAD_CONFIG):
     print(CONFIG_PATH)
