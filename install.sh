@@ -3,7 +3,7 @@
 if [ "$#" -ge "1" ]; then
 	PYTHON=$1
 	source env.sh $PYTHON
-	CUDA=$($PYTHON -c 'import config; print(config.CUDA)')
+	CUDA=$($PYTHON -c 'import general_config as gc; print(gc.CUDA)')
 
 	if [ $CUDA == "True" ]; then
 		if [ $# != 2 ]; then
@@ -20,13 +20,13 @@ else
 	echo "Usage: $0 <python_interpreter> [<cuda_root>]"
 	exit
 fi
-SITE=$($PYTHON -c 'import config; print(config.LOCAL_SITE_PATH)')
-INSTALL_PYTORCH=$($PYTHON -c 'import config; print(config.INSTALL_PYTORCH)')
-PARAM_BEST=$($PYTHON -c 'import config; print(config.PARAM_BEST)')
-INSTALL_PYBIND11=$($PYTHON -c 'import config; print(config.INSTALL_PYBIND11)')
-PREFIX=$($PYTHON -c 'import config; print(config.PREFIX)')
-DEBUG=$($PYTHON -c 'import config; print(config.DEBUG)')
-PYVERSION=$($PYTHON -c 'import config; print(config.PYVERSION)')
+SITE=$($PYTHON -c 'import general_config as gc; print(gc.LOCAL_SITE_PATH)')
+INSTALL_PYTORCH=$($PYTHON -c 'import general_config as gc; print(gc.INSTALL_PYTORCH)')
+PARAM_BEST=$($PYTHON -c 'import general_config as gc; print(gc.PARAM_BEST)')
+INSTALL_PYBIND11=$($PYTHON -c 'import general_config as gc; print(gc.INSTALL_PYBIND11)')
+PREFIX=$($PYTHON -c 'import general_config as gc; print(gc.PREFIX)')
+DEBUG=$($PYTHON -c 'import general_config as gc; print(gc.DEBUG)')
+PYVERSION=$($PYTHON -c 'import general_config as gc; print(gc.PYVERSION)')
 #export PYTHONPATH="$PYTHONPATH:$(pwd)"
 
 echo "PYTHON: $(which $PYTHON)"

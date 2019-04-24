@@ -1,8 +1,7 @@
 import sys
 sys.path.append('..')
-from config import *
+from general_config import *
 from importlib import import_module
-model_module = import_module(MODEL_MODULE)
 import cmcts
 import pdb
 import glob
@@ -15,7 +14,7 @@ import tools
 from datetime import datetime
 import re
 
-def eval_models(model_class, param_best, param_latest):
+def eval_models(param_best, param_latest):
     log_file = "{}/eval_{}_{}.log".format(
             LOG_PATH,
             os.path.basename(param_best).replace(".pyt",''),
@@ -25,12 +24,21 @@ def eval_models(model_class, param_best, param_latest):
             level=logging.DEBUG)
     print("Log saved to {}".format(log_file))
     logging.info("########################################")
-    logging.info(tools.eval_config())
+    logging.info(tools.str_conf())
     logging.info("MCTS from: {}".format(cmcts.__file__))
-    print(tools.eval_config())
+    print(tools.str_conf())
 
-    model = model_class()
-    model.eval()
+    config_best = tools.get_param_conf()
+    model_module_best = import_module(config_best.MODEL_MODULE)
+    model_class_best = getattr(model_module_best, config_best.MODEL_CLASS)
+    model_best = model_class_best()
+    model_best.eval()
+
+    config_latest = tools.get_versus_conf()
+    model_module_latest = import_module(config_latest.MODEL_MODULE)
+    model_class_latest = getattr(model_module_latest, config_latest.MODEL_CLASS)
+    model_latest = model_class_latest()
+    model_latest.eval()
 
     logging.info("Best model {}".format(param_best))
     logging.info("Latest model {}".format(param_latest))
@@ -51,35 +59,31 @@ def eval_models(model_class, param_best, param_latest):
             os.path.basename(param_latest).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
-    model.load_state_dict(param_best_loaded['state_dict'])
+    model_best.load_state_dict(param_best_loaded['state_dict'])
     if CUDA:
         example.cuda()
-        model.cuda()
+        model_best.cuda()
+        model_latest.cuda()
 
     with torch.no_grad():
-        traced_script_module = torch.jit.trace(model, example)
+        traced_script_module = torch.jit.trace(model_best, example)
 
     logging.info("Saving best model to {}".format(jit_model_best))
     traced_script_module.save(jit_model_best)
-
-    model.load_state_dict(param_latest_loaded['state_dict'])
-
-    if CUDA:
-        model.cuda()
+    model_latest.load_state_dict(param_latest_loaded['state_dict'])
 
     with torch.no_grad():
-        traced_script_module = torch.jit.trace(model, example)
+        traced_script_module = torch.jit.trace(model_latest, example)
 
     logging.info("Saving latest model to {}".format(jit_model_latest))
     traced_script_module.save(jit_model_latest)
 
-    logging.info("MCTS initialised with alpha default, cpuct {}".format(CPUCT))
-    mcts_best = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    mcts_best = cmcts.mcts(seed=rand_uint32(), cpuct=config_best.CPUCT)
     mcts_best.set_alpha_default()
     mcts_best.set_threads(THREADS)
     mcts_best.set_params(jit_model_best)
 
-    mcts_latest = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    mcts_latest = cmcts.mcts(seed=rand_uint32(), cpuct=config_latest.CPUCT)
     mcts_latest.set_alpha_default()
     mcts_latest.set_threads(THREADS)
     mcts_latest.set_params(jit_model_latest)
@@ -107,7 +111,7 @@ def eval_models(model_class, param_best, param_latest):
 
         if i%2 == 0:
             logging.info("First player is best")
-            eval_game(mcts_best, mcts_latest)
+            eval_game(mcts_best, config_best.SIMS, mcts_latest, config_latest.SIMS)
             if mcts_best.winner == first_player:
                 wins_best += 1
             elif mcts_best.winner == second_player:
@@ -115,7 +119,7 @@ def eval_models(model_class, param_best, param_latest):
             else:
                 draws += 1
         else:
-            eval_game(mcts_latest, mcts_best)
+            eval_game(mcts_latest, config_latest.SIMS, mcts_best, config_best.SIMS)
             if mcts_best.winner == first_player:
                 wins_latest += 1
             elif mcts_best.winner == second_player:
@@ -154,9 +158,9 @@ def eval_models(model_class, param_best, param_latest):
 
     return True
 
-def eval_game(mcts_first, mcts_second):
+def eval_game(mcts_first, sims_first, mcts_second, sims_second):
     for i in range(SIZE):
-        mcts_first.simulate(SIMS)
+        mcts_first.simulate(sims_first)
         pi = mcts_first.get_prob()
         move = pi.argmax()
         mcts_first.make_move(move)
@@ -166,7 +170,7 @@ def eval_game(mcts_first, mcts_second):
             logging.info("Game ended in {} moves".format(i))
             break
 
-        mcts_second.simulate(SIMS)
+        mcts_second.simulate(sims_second)
         pi = mcts_second.get_prob()
         move = pi.argmax()
         mcts_first.make_move(move)
@@ -186,12 +190,12 @@ if __name__ == "__main__":
     if param_latest == None:
         print("Parameters were not found")
         sys.exit(1)
+    print(param_best, param_latest)
     if param_best == param_latest:
         print("Best and latest are the same")
         sys.exit(1)
 
-    model_class = getattr(model_module, MODEL_CLASS)
-    if eval_models(model_class, param_best, param_latest):
+    if eval_models(param_best, param_latest):
         print("Evluation of params {} and {} finished successfuly"
                 .format(param_best, param_latest))
     else:

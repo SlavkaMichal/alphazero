@@ -20,15 +20,12 @@ def self_play_iteration(param_file=None, data_file=None):
     print("Log saved to: {}/self-play_{}.log".format(LOG_PATH, os.path.basename(data_file).replace(".pyt",'')))
     logging.info("########################################")
     if DEBUG:
-        print(tools.self_play_config())
-    logging.info(tools.self_play_config())
+        print(tools.str_conf())
+    logging.info(tools.str_conf())
 
     config = tools.get_param_conf()
-    print(config.CPUCT)
-    print(CPUCT)
-    sys.exit()
-    model_module = import_module(param_conf.MODEL_MODULE)
-    model_class = getattr(model_module, param_conf.MODEL_CLASS)
+    model_module = import_module(config.MODEL_MODULE)
+    model_class = getattr(model_module, config.MODEL_CLASS)
     model = model_class()
 
     if os.path.isfile(param_file):
@@ -52,7 +49,7 @@ def self_play_iteration(param_file=None, data_file=None):
 
     jit_model_name = "{}/tmp_{}{}.pt".format(
             os.path.dirname(os.path.realpath(__file__)),
-            os.path.basename(data_file).replace("{param_conf.MODEL_CLASS}_", ''),
+            os.path.basename(data_file).replace("{config.MODEL_CLASS}_", ''),
             os.path.basename(param_file).replace(".pyt",''))
     example = torch.rand(1, 2, SHAPE, SHAPE)
 
@@ -68,13 +65,13 @@ def self_play_iteration(param_file=None, data_file=None):
     logging.info("Saving traced script to {}".format(jit_model_name))
     traced_script_module.save(jit_model_name)
 
-    logging.info("MCTS initialised with alpha default, cpuct {}".format(param_conf.CPUCT))
-    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=param_conf.CPUCT)
+    logging.info("MCTS initialised with alpha default, cpuct {}".format(config.CPUCT))
+    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=config.CPUCT)
     mcts0.set_alpha_default()
     mcts0.set_threads(THREADS)
     mcts0.set_params(jit_model_name)
 
-    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=param_conf.CPUCT)
+    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=config.CPUCT)
     mcts1.set_alpha_default()
     mcts1.set_threads(THREADS)
     mcts1.set_params(jit_model_name)
@@ -91,7 +88,7 @@ def self_play_iteration(param_file=None, data_file=None):
         start = datetime.now()
         tools.make_init_moves(mcts0, mcts1)
 
-        game_data = self_play_game(mcts0, mcts1)
+        game_data = self_play_game(mcts0, mcts1, config.SIMS, config.TAU)
         data.extend(game_data)
         mcts0.clear()
         mcts1.clear()
@@ -126,7 +123,7 @@ def self_play_iteration(param_file=None, data_file=None):
     logging.info("####################END#################")
     return True
 
-def self_play_game(mcts0, mcts1):
+def self_play_game(mcts0, mcts1, sims, tau):
     """ plays one game
         for sefl play model0 and model1 should be the same
         also mcts0 and mcts1 can be the same
@@ -147,11 +144,11 @@ def self_play_game(mcts0, mcts1):
 
     dt = np.dtype([('board', 'f4', (2,SHAPE,SHAPE)), ('pi', 'f4', (SIZE,)), ('r', 'f4')])
 
-    for i in range(param_conf.SIZE):
-        mcts0.simulate(param_conf.SIMS)
+    for i in range(SIZE):
+        mcts0.simulate(sims)
         pi = mcts0.get_prob()
         board = mcts0.get_board()
-        if (i > param_conf.TAU):
+        if (i > tau):
             move = pi.argmax()
             pi[:] = 0
             pi[move] = 1
@@ -164,10 +161,10 @@ def self_play_game(mcts0, mcts1):
         if mcts0.winner != -1:
             break
 
-        mcts1.simulate(param_conf.SIMS)
+        mcts1.simulate(sims)
         pi = mcts1.get_prob()
         board = mcts1.get_board()
-        if (i > param_conf.TAU):
+        if (i > tau):
             move = pi.argmax()
             pi[:] = 0
             pi[move] = 1

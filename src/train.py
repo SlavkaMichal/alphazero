@@ -1,8 +1,7 @@
 import sys
 sys.path.append('..')
-from config import *
+from general_config import *
 from importlib import import_module
-model_module = import_module(MODEL_MODULE)
 import pdb
 import os
 import glob
@@ -12,20 +11,23 @@ import numpy as np
 from datetime import datetime
 import tools
 
-def train(model_class, param_file, new_param_file, data_files):
+def train(param_file, new_param_file, data_files):
     logging.basicConfig(format='%(levelname)s: %(message)s',
             filename="{}/train_{}.log".format(LOG_PATH, os.path.basename(new_param_file).replace(".pyt",'')),
             level=logging.DEBUG)
     logging.info("########################################")
-    logging.info(tools.train_config())
+    logging.info(tools.str_conf())
     tools.config_save(os.path.basename(new_param_file).replace(".pyt", ''))
-    print(tools.train_config())
+    print(tools.str_conf())
 
     cuda = torch.cuda.is_available()
     logging.info("Is cuda avalable {}".format(cuda))
     logging.info("Using model {} for training".format(param_file))
     logging.info("New model is {}".format(new_param_file))
 
+    config = tools.get_param_conf()
+    model_module = import_module(config.MODEL_MODULE)
+    model_class = getattr(model_module, config.MODEL_CLASS)
     model = model_class()
     model.train()
 
@@ -45,6 +47,10 @@ def train(model_class, param_file, new_param_file, data_files):
             # probably architecture has changed
             logging.warning("Could not load parametrs")
             logging.warning(e)
+            if 'PARAM' in os.environ and LOAD_CONFIG_PARAM:
+                logging.error("Supplied parameters does not match with configuration file")
+                sys.exit(1)
+
 
     # get window
     logging.info("Training files:")
@@ -67,7 +73,7 @@ def train(model_class, param_file, new_param_file, data_files):
     data = np.concatenate(data_list)
     logging.info("Original data size {}".format(data.size))
     # get all possible board rotations and remove duplicate board positions
-    if ROTATIONS:
+    if config.ROTATIONS:
         logging.info("Augmenting data")
         logging.info("Original data size {}".format(data.size))
         data = tools.get_rotations(data)
@@ -83,34 +89,43 @@ def train(model_class, param_file, new_param_file, data_files):
     #data = tools.get_unique(data)
     del data_list
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.LR)
 
     criterion_pi = torch.nn.KLDivLoss(reduction='batchmean')
     criterion_v  = torch.nn.MSELoss()
 
     # step in which log will be created
-    iterations = data.size//BATCH_SIZE
-    if iterations < 25:
+    iter_train = data.size//config.BATCH_SIZE
+    iter_train = iter_train if iter_train > 0 else 1
+    if iter_train < VIEW_STEP:
         view_step = 1
     else:
-        view_step = iterations//20 # progress will be displayed 20times per epoch
+        view_step = iter_train//VIEW_STEP # progress will be displayed 20times per epoch
 
-    logging.info("Iterations per epoch {}".format(iterations))
-    logging.info("Batch size {}".format(BATCH_SIZE))
+    iter_valid = validation.size//config.BATCH_SIZE
+    iter_valid = iter_valid if iter_valid > 0 else 1
+    if iter_valid < VIEW_STEP:
+        view_step_valid = 1
+    else:
+        view_step_valid = iter_valid//VIEW_STEP
+
+
+    logging.info("Iterations per epoch {}".format(iter_train))
+    logging.info("Batch size {}".format(config.BATCH_SIZE))
     start_train = datetime.now()
     logging.info("Starting at {}".format(start_train))
 
-    for e in range(EPOCHS):
+    for e in range(config.EPOCHS):
         acc_vloss = 0
         acc_ploss = 0
         acc_loss  = 0
         it = 0
         start_epoch = datetime.now()
-        logging.info("Running epoch {}/{}".format(e+1,EPOCHS))
+        logging.info("Running epoch {}/{}".format(e+1,config.EPOCHS))
         acc_batchtime = None
         model.train()
-        for i in range(iterations):
-            batch_ids = np.random.choice(data.size, BATCH_SIZE)
+        for i in range(iter_train):
+            batch_ids = np.random.choice(data.size, config.BATCH_SIZE)
             batch_input   = torch.from_numpy(data[batch_ids]['board'])
             batch_vlabels = torch.from_numpy(data[batch_ids]['r']).reshape(-1, 1, 1, 1)
             batch_plabels = torch.from_numpy(data[batch_ids]['pi'])
@@ -136,9 +151,10 @@ def train(model_class, param_file, new_param_file, data_files):
             loss.backward()
             optimizer.step()
             if i % view_step == view_step -1:
-                logging.info("E:{}/{} I:{}/{} AccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss/it))
-                logging.info("E:{}/{} I:{}/{} AccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss/it))
-                logging.info("E:{}/{} I:{}/{} AccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_loss/it))
+                progress = int(round(it/iter_train*100))
+                logging.info("E:{}/{} I:{:3}% AccVALUE loss: {}".format(e+1, config.EPOCHS, progress, acc_vloss/it))
+                logging.info("E:{}/{} I:{:3}% AccPI    loss: {}".format(e+1, config.EPOCHS, progress, acc_ploss/it))
+                logging.info("E:{}/{} I:{:3}% AccTOTAL loss: {}".format(e+1, config.EPOCHS, progress, acc_loss/it))
 
         logging.info("Epoch:{} AccPi loss:{}".format(e, acc_ploss/it))
         logging.info("Epoch:{} AccValue loss: {}".format(e, acc_vloss/it))
@@ -150,11 +166,11 @@ def train(model_class, param_file, new_param_file, data_files):
         acc_loss  = 0
         it = 0
         start_valid = datetime.now()
-        logging.info("Running validation of epoch {}/{}".format(e+1,EPOCHS))
+        logging.info("Running validation of epoch {}/{}".format(e+1,config.EPOCHS))
         acc_batchtime = None
         model.eval()
-        for i in range(validation.size//BATCH_SIZE):
-            batch_ids = np.random.choice(validation.size, BATCH_SIZE)
+        for i in range(iter_valid):
+            batch_ids = np.random.choice(validation.size, config.BATCH_SIZE)
             batch_input   = torch.from_numpy(validation[batch_ids]['board'])
             batch_vlabels = torch.from_numpy(validation[batch_ids]['r']).reshape(-1, 1, 1, 1)
             batch_plabels = torch.from_numpy(validation[batch_ids]['pi'])
@@ -177,10 +193,11 @@ def train(model_class, param_file, new_param_file, data_files):
             acc_loss  += loss.item()
 
             # backpropagation
-            if i % view_step == view_step -1:
-                logging.info("E:{}/{} I:{}/{} ValidAccVALUE loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_vloss/it))
-                logging.info("E:{}/{} I:{}/{} ValidAccPI    loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_ploss/it))
-                logging.info("E:{}/{} I:{}/{} ValidAccTOTAL loss: {}".format(e+1, EPOCHS, i+1, iterations, acc_loss/it))
+            if i % view_step_valid == view_step_valid -1:
+                progress = int(round(it/iter_valid*100))
+                logging.info("E:{}/{} I:{:3}% ValidAccVALUE loss: {}".format(e+1, config.EPOCHS, progress, acc_vloss/it))
+                logging.info("E:{}/{} I:{:3}% ValidAccPI    loss: {}".format(e+1, config.EPOCHS, progress, acc_ploss/it))
+                logging.info("E:{}/{} I:{:3}% ValidAccTOTAL loss: {}".format(e+1, config.EPOCHS, progress, acc_loss/it))
 
         # end of epoch
         end = datetime.now()
@@ -206,8 +223,7 @@ if __name__ == "__main__":
     param_file = tools.get_params()
     new_param_file = tools.get_new_params()
     data_files = tools.get_data()
-    model_class = getattr(model_module, MODEL_CLASS)
-    if train(model_class, param_file, new_param_file, data_files):
+    if train(param_file, new_param_file, data_files):
         print("New model parameters were saved to {}".format(new_param_file))
     else:
         print("Training failed, check for errors {}/train_{}.log".format(LOG_PATH, new_param_file))

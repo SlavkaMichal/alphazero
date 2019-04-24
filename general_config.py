@@ -1,7 +1,6 @@
 import sys
 import os
 
-TEST = ""
 ##############################################################################
 #                                 sefl-play                                  #
 ##############################################################################
@@ -10,7 +9,7 @@ TEST = ""
 TRAIN_SAMPLES = 10000000
 
 # max generating time
-TIMEOUT_SELF_PLAY = 15
+TIMEOUT_SELF_PLAY = 1
 
 ##############################################################################
 #                                 evaluation                                 #
@@ -19,10 +18,16 @@ TIMEOUT_SELF_PLAY = 15
 EVAL_GAMES = 50
 
 # max evaluation time in minutes
-TIMEOUT_EVAL = 50
+TIMEOUT_EVAL = 2
 
 # percentual wins for new neural network to replace current best
 EVAL_TRESHOLD = 0.6
+
+##############################################################################
+#                                    training                                #
+##############################################################################
+# how many times per iteration will show progress
+VIEW_STEP = 20
 
 ##############################################################################
 #                                   general                                  #

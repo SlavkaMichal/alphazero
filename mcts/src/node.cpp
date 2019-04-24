@@ -26,10 +26,12 @@ Node::
 void Node::
 set_prior(torch::Tensor p, double *dir)
 {
-	std::lock_guard<std::mutex> guard(node_mutex);
-	float *ptr = (float *)p.data_ptr();
-	if (nodeN != -1)
+	node_mutex.lock();
+	if (nodeN != -1){
+		node_mutex.unlock();
 		return;
+	}
+	float *ptr = (float *)p.data_ptr();
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
 	for (int i = 0; i < SIZE; i++){
@@ -38,6 +40,7 @@ set_prior(torch::Tensor p, double *dir)
 	}
 
 	nodeN = 0;
+	node_mutex.unlock();
 	return;
 }
 
@@ -45,11 +48,13 @@ set_prior(torch::Tensor p, double *dir)
 void Node::
 set_prior(State *state, double* dir)
 {
-	std::lock_guard<std::mutex> guard(node_mutex);
 	float sum = 0.;
 	// check if node wasn't already explored
-	if (nodeN != -1)
+	node_mutex.lock();
+	if (nodeN != -1){
+		node_mutex.unlock();
 		return;
+	}
 
 	for (int i = 0; i < SIZE; i++){
 		childP[i] = state->hboard[SIZE+i]+state->hboard[SIZE+i];
@@ -60,6 +65,7 @@ set_prior(State *state, double* dir)
 	}
 
 	nodeN = 0;
+	node_mutex.unlock();
 	return;
 }
 #endif
@@ -67,11 +73,12 @@ set_prior(State *state, double* dir)
 void Node::
 backpropagate(int action, float value)
 {
-	std::lock_guard<std::mutex> guard(node_mutex);
+	node_mutex.lock();
 	/* restore virtual loss */
 	childW[action] += 1;
 	childW[action] += value;
 
+	node_mutex.unlock();
 	return;
 }
 
@@ -80,7 +87,7 @@ select(State *state, double cpuct)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
-	std::lock_guard<std::mutex> guard(node_mutex);
+	node_mutex.lock();
 	int best_a = -1;
 	double u;
 	double best_u = -INFINITY;
@@ -110,6 +117,7 @@ select(State *state, double cpuct)
 	// subtract virtual loss
 	childW[best_a] -= 1;
 
+	node_mutex.unlock();
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
 
