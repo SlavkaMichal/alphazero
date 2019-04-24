@@ -54,7 +54,7 @@ SIMS = 1000
 TAU = 10
 
 # c constant in PUCT algorithm
-CPUCT = 10.
+CPUCT = 4.
 
 # number of threads
 THREADS = 8

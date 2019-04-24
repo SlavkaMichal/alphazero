@@ -138,7 +138,8 @@ def get_data():
     """
     conf = get_param_conf()
     if 'DATA' in os.environ:
-        data = os.environ['DATA'].split(',').strip()
+        data = os.environ['DATA'].split(',')
+        data = [ d.strip() for d in data ]
     else:
         data = glob("{}/{}{}_*[!.tgz]".format(DATA_PATH, conf.MODEL_CLASS, SHAPE))
         data.sort()
