@@ -147,6 +147,7 @@ def eval_models(model_class, param_best, param_latest):
     if wins_latest/(wins_latest+wins_best) >= EVAL_TRESHOLD:
         logging.info("Setting new best to {}".format(param_latest))
         tools.set_best(param_latest)
+        tools.init_generation()
     else:
         logging.info("Latest model is not good enoug to replace current best")
     logging.info("####################END#################")

@@ -36,6 +36,7 @@ def repr_pi(pi):
     return p
 
 def make_init_moves(mcts0, mcts1):
+    return
     mcts0.make_move(85)
     mcts1.make_move(85)
 
@@ -357,7 +358,6 @@ def config_load(conf_file=LOAD_CONFIG):
     print(CONFIG_PATH)
     print(os.path.basename(conf_file))
     print(conf_file)
-    sys.exit()
     conf_file = "{}/{}".format(CONFIG_PATH, os.path.basename(conf_file))
     if not os.path.isfile(conf_file):
         raise RuntimeError("Configuration file {} not found".format(conf_file))

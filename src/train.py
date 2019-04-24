@@ -56,7 +56,13 @@ def train(model_class, param_file, new_param_file, data_files):
         logging.info("\t{}".format(d))
 
     # loading data
-    data_list = [ np.load(d) for d in data_files ]
+    data_list = []
+    for d in data_files:
+        try:
+            data_list.append(np.load(d))
+        except ValueError as e:
+            logging.error("Could not load file {}".format(d))
+            logging.error(e)
 
     data = np.concatenate(data_list)
     logging.info("Original data size {}".format(data.size))
@@ -205,5 +211,3 @@ if __name__ == "__main__":
         print("New model parameters were saved to {}".format(new_param_file))
     else:
         print("Training failed, check for errors {}/train_{}.log".format(LOG_PATH, new_param_file))
-    if not tools.dry_run():
-        tools.init_generation()
