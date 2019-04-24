@@ -7,7 +7,12 @@ import numpy as np
 import cmcts
 import argparse
 import server as cmds
+import tools
+import torch
+from tools import rand_uint32
 from server import Server
+from importlib import import_module
+model_module = import_module(MODEL_MODULE)
 
 HOST = '127.0.0.1'
 PORT = 27015
@@ -28,6 +33,25 @@ def main():
     print("DBG:Play: starting server")
     server = Server(args.ip, args.port)
     mcts = cmcts.mcts()
+    param_file = tools.get_params()
+    params = torch.load(param_file)
+    model_class = getattr(model_module, MODEL_CLASS)
+    model = model_class()
+    model.load_state_dict(params['state_dict'])
+    print(param_file)
+    jit_model_name = "{}/tmp_{}.pt".format(
+            os.path.dirname(os.path.realpath(__file__)),
+            os.path.basename(param_file).replace(".pyt",''))
+    example = torch.rand(1,2,SHAPE,SHAPE)
+    model.eval()
+    with torch.no_grad():
+        traced_script_module = torch.jit.trace(model, example)
+
+    traced_script_module.save(jit_model_name)
+    mcts = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    mcts.set_alpha_default()
+    mcts.set_threads(THREADS)
+    mcts.set_params(jit_model_name)
 
     while True:
         print("DBG:Play: waiting for connection")
@@ -39,7 +63,7 @@ def main():
             if cmd == cmds.OP_MOVE:
                 print("Opponents move")
                 sys.stdout.flush()
-                mcts.make_move(x = move[0], y = move[1])
+                mcts.make_movexy(x = move[0], y = move[1])
             elif cmd == cmds.MAKE_MOVE:
                 print("My move sims {}".format(SIMS))
                 sys.stdout.flush()
