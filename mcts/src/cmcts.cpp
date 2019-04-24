@@ -191,7 +191,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				// cuda synchronize??
 				input.push_back(tensor);
 				/* evaluate model */
-				auto output = module->forward(input).toTuple();
+				output = module->forward(input).toTuple();
 
 				value = -output->elements()[0].toTensor().to(at::kCPU).item<float>();
 				current->set_prior(output->elements()[1].toTensor().to(at::kCPU), dir_noise);
@@ -202,28 +202,50 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 #else
 			/* no heuristic */
 			/* create tensor wraper around buffer */
-			at::Tensor tensor = torch::from_blob(
-					(void *)state->board.data(),
-					at::IntList(sizes),
-					options);
-			tensor = tensor.toType(at::kFloat); //this will make a copy
-			if (this->cuda)
-				tensor.to(at::kCUDA);
-			input.push_back(tensor);
-			/* evaluate model */
+			at::Tensor tensor;
 			try {
+				tensor = torch::from_blob(
+						(void *)state->board.data(),
+						at::IntList(sizes),
+						options);
+				tensor = tensor.toType(at::kFloat); //this will make a copy
+			}
+			catch (const std::exception& e) {
+				// this executes if f() throws std::underflow_error (base class rule)
+				std::cout << "e1: :" << std::this_thread::get_id() << std::endl;
+				std::cout << e.what() << std::endl;
+				std::cout << state->repr() << std::endl;
+				std::cout << current->repr() << std::endl;
+				return;
+			}
+			try {
+				if (this->cuda)
+					tensor.to(at::kCUDA);
+				input.push_back(tensor);
+				/* evaluate model */
 				output = module->forward(input).toTuple()->elements();
 			}
-			catch (const std::system_error& e) {
+			catch (const std::exception& e) {
 				// this executes if f() throws std::underflow_error (base class rule)
-				std::cout << "s8:" << std::this_thread::get_id() << std::endl;
+				std::cout << "e2: :" << std::this_thread::get_id() << std::endl;
+				std::cout << e.what() << std::endl;
 				std::cout << state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
 				return;
 			}
 
-			value = -output[0].toTensor().to(at::kCPU).item<float>();
-			current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise);
+			try {
+				value = -output[0].toTensor().to(at::kCPU).item<float>();
+				current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise);
+			}
+			catch (const std::exception& e) {
+				// this executes if f() throws std::underflow_error (base class rule)
+				std::cout << "e3: :" << std::this_thread::get_id() << std::endl;
+				std::cout << e.what() << std::endl;
+				std::cout << state->repr() << std::endl;
+				std::cout << current->repr() << std::endl;
+				return;
+			}
 #endif
 			break;
 		}
