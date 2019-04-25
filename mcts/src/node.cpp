@@ -28,6 +28,7 @@ set_prior(torch::Tensor p, double *dir, double dir_eps)
 {
 	node_mutex.lock();
 	if (nodeN != -1){
+		// some other thread did the job
 		node_mutex.unlock();
 		return;
 	}
@@ -36,9 +37,11 @@ set_prior(torch::Tensor p, double *dir, double dir_eps)
 	// TODO som si isty ze toto ide aj lepsie
 
 	double prior_eps = 1. - dir_eps;
+	double sum = 0.;
 	for (int i = 0; i < childP.size(); i++){
 		// dir sum to 1 also p should
 		childP[i] = prior_eps*exp(ptr[i]) + dir_eps*dir[i];
+		sum += childP[i];
 	}
 
 	nodeN = 0;
@@ -78,7 +81,7 @@ backpropagate(int action, float value)
 {
 	node_mutex.lock();
 	/* restore virtual loss and result of the game*/
-	childW.at(action) += value + 1;
+	childW.at(action) += value + 1.;
 
 	node_mutex.unlock();
 	return;
@@ -117,7 +120,7 @@ select(State *state, double cpuct)
 	childN.at(best_a) += 1;
 	nodeN += 1;
 	// subtract virtual loss
-	childW.at(best_a) -= 1;
+	childW.at(best_a) -= 1.;
 
 	node_mutex.unlock();
 	if (best_a == -1)
@@ -160,7 +163,7 @@ make_move(int action)
 	return ret;
 }
 
-std::array<int, SIZE>* Node::
+std::array<long int, SIZE>* Node::
 counts()
 {
 	return &childN;
@@ -171,7 +174,7 @@ repr()
 {
 	std::string s;
 	int sum = 0;
-	float sumf = 0;
+	double sumf = 0;
 	std::stringstream ss;
 
 	s.append("Visits: "+std::to_string(nodeN)+"\n");
@@ -189,7 +192,7 @@ repr()
 	}
 	s.append("\nCounts total: "+std::to_string(sum)+"\n");
 
-	sum = 0;
+	sumf = 0.;
 	s.append("\nProbs:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){
@@ -202,7 +205,7 @@ repr()
 	}
 	s.append("\nProbs total: "+std::to_string(sumf)+"\n");
 
-	sumf = 0;
+	sumf = 0.;
 	s.append("\nTotal child values:\n");
 	for (int i=0; i<SHAPE; i++){
 		for (int j=0; j<SHAPE; j++){

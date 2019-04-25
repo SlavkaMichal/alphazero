@@ -26,11 +26,11 @@ public:
 	void backpropagate(int action, float value);
 	void set_prior(torch::Tensor p, double *dir, double dir_eps);
 	void set_prior(State *state, double* dir, double dir_eps);
-	std::array<int, SIZE>* counts();
+	std::array<long int, SIZE>* counts();
 	std::string repr();
 	std::string print_u(State *state, double cpuct);
 	bool is_null(int a);
-	int nodeN;
+	long long int nodeN;
 //	std::string name;
 
 	//Node(std::string &name, int a);
@@ -40,9 +40,9 @@ private:
 	std::mutex node_mutex;
 	std::array<std::unique_ptr<Node>, SIZE> child;
 	int child_cnt;
-	std::array<int, SIZE>   childN;
+	std::array<long int, SIZE> childN;
 	std::array<float, SIZE> childP;
-	std::array<float, SIZE> childW;
+	std::array<double, SIZE> childW;
 };
 
 #endif

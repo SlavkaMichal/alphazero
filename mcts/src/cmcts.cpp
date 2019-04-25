@@ -309,16 +309,23 @@ Cmcts::get_prob()
 	/* all nonvalid moves should not be played,
 	   they are skiped in select phase so visit count should be zero
 	 */
-	std::array<int, SIZE>* counts = root_node->counts();
-	float sum = root_node->nodeN;
+	std::array<long int, SIZE>* counts = root_node->counts();
+	double sum = root_node->nodeN;
+	double prob_sum = 0;
 	//auto v = new std::vector<float>(counts->begin(), counts->end());
 	auto b = py::array_t<float>(counts->size());
 	py::buffer_info buff = b.request();
 	if (buff.shape[0] != counts->size())
 		throw std::runtime_error("cmcts get_prob size mismatch");
 	float *ptr = (float*)buff.ptr;
-	for (int i = 0; i < counts->size(); i++)
-		ptr[i] = counts->at(i)/sum;
+	for (int i = 0; i < counts->size(); i++){
+		ptr[i] = (double)counts->at(i)/sum;
+		prob_sum += ptr[i];
+	}
+	if (round(prob_sum*1000.) != 1000){
+		std::cout << root_node->repr() << std::endl;
+		throw std::runtime_error("Not a distribution");
+	}
 	return b;
 }
 
