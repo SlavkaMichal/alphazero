@@ -24,7 +24,7 @@ Node::
 }
 
 void Node::
-set_prior(torch::Tensor p, double *dir)
+set_prior(torch::Tensor p, double *dir, double dir_eps)
 {
 	node_mutex.lock();
 	if (nodeN != -1){
@@ -32,14 +32,13 @@ set_prior(torch::Tensor p, double *dir)
 		return;
 	}
 	float *ptr = (float *)p.data_ptr();
-	if (p.size(1) != childP.size())
-		throw std::runtime_error("set_prior tensor childP size missmatch");
-
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
+
+	double prior_eps = 1. - dir_eps;
 	for (int i = 0; i < childP.size(); i++){
 		// dir sum to 1 also p should
-		childP[i] = 0.75*exp(ptr[i])+0.25*dir[i];
+		childP[i] = prior_eps*exp(ptr[i]) + dir_eps*dir[i];
 	}
 
 	nodeN = 0;
@@ -49,7 +48,7 @@ set_prior(torch::Tensor p, double *dir)
 
 #ifdef HEUR
 void Node::
-set_prior(State *state, double* dir)
+set_prior(State *state, double* dir, double dir_eps)
 {
 	float sum = 0.;
 	// check if node wasn't already explored
@@ -63,8 +62,9 @@ set_prior(State *state, double* dir)
 		childP[i] = state->hboard[SIZE+i]+state->hboard[SIZE+i];
 		sum += childP[i];
 	}
+	double prior_eps = 1. - dir_eps;
 	for (int i = 0; i < childP.size(); i++){
-		childP[i] = childP[i]/sum*0.7+dir[i]*0.3;
+		childP[i] = childP[i]/sum*prior_eps + dir[i]*dir_eps;
 	}
 
 	nodeN = 0;

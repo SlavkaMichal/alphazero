@@ -82,11 +82,13 @@ def eval_models(param_best, param_latest):
     mcts_best.set_alpha_default()
     mcts_best.set_threads(THREADS)
     mcts_best.set_params(jit_model_best)
+    mcts_best.eps = config_best.EPS
 
     mcts_latest = cmcts.mcts(seed=rand_uint32(), cpuct=config_latest.CPUCT)
     mcts_latest.set_alpha_default()
     mcts_latest.set_threads(THREADS)
     mcts_latest.set_params(jit_model_latest)
+    mcts_latest.eps = config_latest.EPS
 
     wins_best   = 0
     wins_latest = 0

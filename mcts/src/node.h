@@ -24,8 +24,8 @@ public:
 	struct Node* next_node(int action);
 	struct Node* make_move(int action);
 	void backpropagate(int action, float value);
-	void set_prior(torch::Tensor p, double* dir);
-	void set_prior(State *state, double* dir);
+	void set_prior(torch::Tensor p, double *dir, double dir_eps);
+	void set_prior(State *state, double* dir, double dir_eps);
 	std::array<int, SIZE>* counts();
 	std::string repr();
 	std::string print_u(State *state, double cpuct);

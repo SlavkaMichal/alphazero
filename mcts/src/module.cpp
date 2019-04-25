@@ -20,6 +20,10 @@ PYBIND11_MODULE(cmcts, m) {
 			&Cmcts::get_params,
 			&Cmcts::set_params,
 			"Passes to MCTS funtion to predict prior probability")
+	.def_property("eps",
+			&Cmcts::get_eps,
+			&Cmcts::set_eps,
+			"How significant dirichlet noise should be")
 	.def_property("cuda",
 			&Cmcts::get_cuda,
 			&Cmcts::set_cuda,

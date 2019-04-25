@@ -50,6 +50,11 @@ SIMS = 1000
 # currently using default everywhere
 #ALPHA = 0.1
 
+# constant setting ratio between dirichlet noise and prior probability
+# prior = (1-eps)*p + eps*noise
+# must be in range <0,1>
+EPS = 0.25
+
 # number of moves after which temperature is set from 1 to infinitesimal value
 TAU = 10
 

@@ -47,13 +47,14 @@ public:
 	const double      get_alpha() const;
 	void              set_player(int player);
 	const int         get_player() const;
+	void              set_eps(double eps);
+	const double      get_eps() const;
 	void              set_cpuct(float cpuct);
 	const float       get_cpuct() const;
 	void              set_seed(unsigned long int seed);
 	void              set_alpha_default();
 	const float       get_winner() const;
 	const int         get_move_cnt() const;
-
 	py::array_t<float> get_prob();
 	py::array_t<float> get_board();
 	std::string repr();
@@ -76,6 +77,7 @@ private:
 	double *alpha;     // constant for generating dirichlet noise
 	double *dir_noise; // array alocated for dirichlet noise
 	double cpuct;      // constant affecting how much MCTS relies on neural network
+	double dir_eps;      // constant affecting how much MCTS relies on neural network
 	gsl_rng *r;
 	std::string param_name; // file from which parameters will be loaded
 	int threads;            // number of threads

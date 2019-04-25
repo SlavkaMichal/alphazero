@@ -5,6 +5,7 @@ namespace py = pybind11;
 Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 	cpuct(cpuct),
 	cuda(0),
+	dir_eps(0.25),
 	threads(0)
 {
 	root_node = new Node();
@@ -51,6 +52,13 @@ Cmcts::clear_params()
 /* getters and setters */
 const int Cmcts::get_player() const { return state->player; }
 void      Cmcts::set_player(int player) { state->player = player; }
+
+const double Cmcts::get_eps() const { return dir_eps; }
+void         Cmcts::set_eps(double eps) {
+	if (eps > 1. || eps < 0.)
+		throw std::runtime_error("Epsilon must be in range <0,1>");
+	dir_eps = eps;
+}
 
 const float Cmcts::get_cpuct() const { return this->cpuct; }
 void        Cmcts::set_cpuct(float cpuct) { this->cpuct = cpuct; }
@@ -180,7 +188,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			/* with heuristic */
 			if (module == nullptr){
 				value = -rollout();
-				current->set_prior(state, dir_noise);
+				current->set_prior(state, dir_noise, dir_eps);
 				break;
 			}
 #endif
@@ -218,18 +226,8 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				return;
 			}
 
-			try {
-				value = -output[0].toTensor().to(at::kCPU).item<float>();
-				current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise);
-			}
-			catch (const std::exception& e) {
-				// this executes if f() throws std::underflow_error (base class rule)
-				std::cout << "e3: :" << std::this_thread::get_id() << std::endl;
-				std::cout << e.what() << std::endl;
-				std::cout << state->repr() << std::endl;
-				std::cout << current->repr() << std::endl;
-				return;
-			}
+			value = -output[0].toTensor().to(at::kCPU).item<float>();
+			current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise, dir_eps);
 			break;
 		}
 
