@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from importlib import import_module
 import torch
+import cmcts
 import shutil
 from general_config import *
 import general_config as gc
@@ -331,6 +332,8 @@ def str_conf():
     conf1 = get_param_conf()
     conf2 = get_versus_conf()
     s = ""
+    s += "CMCTS commit {}\n".format(cmcts.version())
+    s += "CMCTS timestamp {}\n".format(cmcts.build_timestamp())
     s += "First config file:\n"
     for a in dir(conf1):
          if not "__" in a:
@@ -339,11 +342,11 @@ def str_conf():
         s += "Second config file:\n"
         for a in dir(conf2):
              if not "__" in a:
-                 s += "{} = {}\n".format(a, getattr(conf2, a))
+                 s += "\t{} = {}\n".format(a, getattr(conf2, a))
     s += "General config file:\n"
     for a in dir(gc):
          if not "__" in a:
-             s += "{} = {}\n".format(a, getattr(gc, a))
+             s += "\t{} = {}\n".format(a, getattr(gc, a))
 
     return s
 
