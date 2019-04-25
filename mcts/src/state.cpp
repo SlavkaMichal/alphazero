@@ -5,11 +5,11 @@ State::State() :
 	move_cnt(0),
 	winner(-1.)
 {
-	std::fill(board.data(), board.data()+2*SIZE, 0);
+	std::fill(board.begin(), board.end(), 0);
 #ifdef HEUR
-	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
-	hboard[SIZE/2] += 0.5;
-	hboard[SIZE+SIZE/2] += 0.5;
+	std::fill(hboard.begin(), hboard.end(), 0.5);
+	hboard.at(hboard.size()/4) += 0.5;
+	hboard.at((hboard.size()/4)*3) += 0.5;
 #endif
 }
 
@@ -67,11 +67,11 @@ State::clear()
 	move_cnt = 0;
 	winner   = -1;
 
-	std::fill(board.data(), board.data()+2*SIZE, 0);
+	std::fill(board.begin(), board.end(), 0);
 #ifdef HEUR
-	std::fill(hboard.data(), hboard.data()+2*SIZE, 0.5);
-	hboard[SIZE/2] += 0.5;
-	hboard[SIZE+SIZE/2] += 0.5;
+	std::fill(hboard.begin(), hboard.end(), 0.5);
+	hboard.at(hboard.size()/4) += 0.5;
+	hboard.at((hboard.size()/4)*3) += 0.5;
 #endif
 	return;
 }
@@ -83,7 +83,7 @@ State::make_move(int action)
 	if (!is_valid(action))
 		throw std::runtime_error("Invalid move "+std::to_string(action)+"\n "+repr()+"!");
 
-	board[player*SIZE + action] = 1;
+	board.at(player*SIZE + action) = 1;
 	player = player ? 0 : 1;
 	move_cnt += 1;
 
@@ -312,8 +312,8 @@ State::update(int action)
 
 	y = action/SHAPE;
 	x = action%SHAPE;
-	hboard[SIZE+action] = 0;
-	hboard[action] = 0;
+	hboard.at(SIZE+action) = 0;
+	hboard.at(action) = 0;
 
 	// horizontal -
 	l = action-1;

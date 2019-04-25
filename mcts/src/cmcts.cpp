@@ -37,7 +37,6 @@ Cmcts::clear()
 {
 	delete root_node;
 	root_node = new Node();
-
 	state->clear();
 	return;
 }
@@ -179,27 +178,12 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			/* with heuristic */
-			if (module != nullptr){
-				/* create tensor wraper around buffer */
-				at::Tensor tensor = torch::from_blob(
-						(void *)state->board.data(),
-						at::IntList(sizes),
-						options);
-				tensor = tensor.toType(at::kFloat); // this will copy data
-				if (this->cuda)
-					tensor.to(at::kCUDA);
-				// cuda synchronize??
-				input.push_back(tensor);
-				/* evaluate model */
-				output = module->forward(input).toTuple();
-
-				value = -output->elements()[0].toTensor().to(at::kCPU).item<float>();
-				current->set_prior(output->elements()[1].toTensor().to(at::kCPU), dir_noise);
-			}else{
+			if (module == nullptr){
 				value = -rollout();
 				current->set_prior(state, dir_noise);
+				break;
 			}
-#else
+#endif
 			/* no heuristic */
 			/* create tensor wraper around buffer */
 			at::Tensor tensor;
@@ -246,7 +230,6 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				std::cout << current->repr() << std::endl;
 				return;
 			}
-#endif
 			break;
 		}
 
@@ -333,6 +316,8 @@ Cmcts::get_prob()
 	//auto v = new std::vector<float>(counts->begin(), counts->end());
 	auto b = py::array_t<float>(counts->size());
 	py::buffer_info buff = b.request();
+	if (buff.shape[0] != counts->size())
+		throw std::runtime_error("cmcts get_prob size mismatch");
 	float *ptr = (float*)buff.ptr;
 	for (int i = 0; i < counts->size(); i++)
 		ptr[i] = counts->at(i)/sum;
@@ -345,6 +330,8 @@ Cmcts::get_heur()
 {
 	auto b = py::array_t<float>(state->hboard.size());
 	py::buffer_info buff = b.request();
+	if (buff.shape[0] != state->hboard.size())
+		throw std::runtime_error("cmcts get_heur size mismatch");
 	float *ptr = (float*)buff.ptr;
 	for (int i = 0; i < state->hboard.size(); i++)
 		ptr[i] = state->hboard[i];

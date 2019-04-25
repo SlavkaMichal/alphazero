@@ -32,11 +32,14 @@ set_prior(torch::Tensor p, double *dir)
 		return;
 	}
 	float *ptr = (float *)p.data_ptr();
+	if (p.size(1) != childP.size())
+		throw std::runtime_error("set_prior tensor childP size missmatch");
+
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
-	for (int i = 0; i < SIZE; i++){
+	for (int i = 0; i < childP.size(); i++){
 		// dir sum to 1 also p should
-		childP.at(i) = 0.75*exp(ptr[i])+0.25*dir[i];
+		childP[i] = 0.75*exp(ptr[i])+0.25*dir[i];
 	}
 
 	nodeN = 0;
@@ -56,12 +59,12 @@ set_prior(State *state, double* dir)
 		return;
 	}
 
-	for (int i = 0; i < SIZE; i++){
+	for (int i = 0; i < childP.size(); i++){
 		childP[i] = state->hboard[SIZE+i]+state->hboard[SIZE+i];
 		sum += childP[i];
 	}
-	for (int i = 0; i < SIZE; i++){
-		childP[i] = childP[i]/sum*0.9+dir[i]*0.1;
+	for (int i = 0; i < childP.size(); i++){
+		childP[i] = childP[i]/sum*0.7+dir[i]*0.3;
 	}
 
 	nodeN = 0;
@@ -74,9 +77,8 @@ void Node::
 backpropagate(int action, float value)
 {
 	node_mutex.lock();
-	/* restore virtual loss */
-	childW[action] += 1;
-	childW[action] += value;
+	/* restore virtual loss and result of the game*/
+	childW.at(action) += value + 1;
 
 	node_mutex.unlock();
 	return;
@@ -112,10 +114,10 @@ select(State *state, double cpuct)
 			best_a = a;
 		}
 	}
-	childN[best_a] += 1;
+	childN.at(best_a) += 1;
 	nodeN += 1;
 	// subtract virtual loss
-	childW[best_a] -= 1;
+	childW.at(best_a) -= 1;
 
 	node_mutex.unlock();
 	if (best_a == -1)
@@ -128,7 +130,7 @@ struct Node* Node::
 next_node(int action)
 {
 	if (child[action]==nullptr){
-		child[action] = std::unique_ptr<Node>(new Node());
+		child.at(action) = std::unique_ptr<Node>(new Node());
 		//child[action] = std::unique_ptr<Node>(new Node(name,action));
 	}
 	return child[action].get();
