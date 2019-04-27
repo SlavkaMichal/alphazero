@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import os
 sys.path.append('..')
 import site
 from config import *
