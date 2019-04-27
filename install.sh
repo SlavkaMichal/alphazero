@@ -86,7 +86,6 @@ if [ $INSTALL_PYTORCH == "True" ]; then
 
 	if [ $CUDA == "False" ]; then
 		echo "Building pytorch without cuda"
-		exit
 		USE_OPENCV=1 \
 		BUILD_TORCH=ON \
 		CMAKE_PREFIX_PATH="/usr/bin/" \
