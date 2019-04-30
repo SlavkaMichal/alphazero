@@ -15,7 +15,7 @@ PYBIND11_MODULE(cmcts, m) {
 	m.def("version", []() { return GIT; } );
 	m.def("build_timestamp", []() { std::string s; return s+__DATE__+" "+__TIME__; } );
 	py::class_<Cmcts>(m, "mcts")
-	.def(py::init<int, double, double>(), "seed"_a=0, "alpha"_a=1, "cpuct"_a=1)
+	.def(py::init<double, double>(), "alpha"_a=1, "cpuct"_a=1)
 	.def_property("params",
 			&Cmcts::get_params,
 			&Cmcts::set_params,
@@ -45,7 +45,6 @@ PYBIND11_MODULE(cmcts, m) {
 			&Cmcts::set_cpuct,
 			"Sets cpuct used to compute UCB")
 	.def("set_params", &Cmcts::set_params, "Passes to MCTS funtion to predict prior probability")
-	.def("set_seed", &Cmcts::set_seed, "Sets seed for rundom number generator")
 	.def("set_alpha", &Cmcts::set_alpha, "Sets alpha variable for generating dirichlet noise")
 	.def("set_threads", &Cmcts::set_threads, "Number of threads mcts runs in")
 	.def("set_alpha_default", &Cmcts::set_alpha_default, "Sets alpha variable for generating dirichlet noise")

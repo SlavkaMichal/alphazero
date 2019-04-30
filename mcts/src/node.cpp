@@ -24,12 +24,10 @@ Node::
 }
 
 void Node::
-set_prior(torch::Tensor p, double *dir, double dir_eps)
+set_prior(torch::Tensor p, double dir_eps)
 {
-	node_mutex.lock();
 	if (nodeN != -1){
 		// some other thread did the job
-		node_mutex.unlock();
 		return;
 	}
 	float *ptr = (float *)p.data_ptr();
@@ -40,24 +38,21 @@ set_prior(torch::Tensor p, double *dir, double dir_eps)
 	double sum = 0.;
 	for (int i = 0; i < childP.size(); i++){
 		// dir sum to 1 also p should
-		childP[i] = prior_eps*exp(ptr[i]) + dir_eps*dir[i];
+		childP[i] = prior_eps*exp(ptr[i]) + dir_eps*childP[i];
 		sum += childP[i];
 	}
 
 	nodeN = 0;
-	node_mutex.unlock();
 	return;
 }
 
 #ifdef HEUR
 void Node::
-set_prior(State *state, double* dir, double dir_eps)
+set_prior(State *state, double dir_eps)
 {
 	float sum = 0.;
 	// check if node wasn't already explored
-	node_mutex.lock();
 	if (nodeN != -1){
-		node_mutex.unlock();
 		return;
 	}
 
@@ -67,11 +62,10 @@ set_prior(State *state, double* dir, double dir_eps)
 	}
 	double prior_eps = 1. - dir_eps;
 	for (int i = 0; i < childP.size(); i++){
-		childP[i] = childP[i]/sum*prior_eps + dir[i]*dir_eps;
+		childP[i] = childP[i]/sum*prior_eps + childP[i]*dir_eps;
 	}
 
 	nodeN = 0;
-	node_mutex.unlock();
 	return;
 }
 #endif
@@ -79,11 +73,10 @@ set_prior(State *state, double* dir, double dir_eps)
 void Node::
 backpropagate(int action, float value)
 {
-	node_mutex.lock();
+	std::lock_guard<std::mutex> lock(node_mutex);
 	/* restore virtual loss and result of the game*/
 	childW.at(action) += value + 1.;
 
-	node_mutex.unlock();
 	return;
 }
 
@@ -92,7 +85,7 @@ select(State *state, double cpuct)
 {
 	if (nodeN == -1)
 		throw std::runtime_error("Node has not been visited yet. Can't select next_node");
-	node_mutex.lock();
+	std::lock_guard<std::mutex> lock(node_mutex);
 	int best_a = -1;
 	double u;
 	double best_u = -INFINITY;
@@ -122,7 +115,6 @@ select(State *state, double cpuct)
 	// subtract virtual loss
 	childW.at(best_a) -= 1.;
 
-	node_mutex.unlock();
 	if (best_a == -1)
 		throw std::runtime_error("No action chosen. Incorrect behaviour");
 

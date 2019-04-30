@@ -2,7 +2,7 @@
 
 namespace py = pybind11;
 
-Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
+Cmcts::Cmcts(double alpha, double cpuct) :
 	cpuct(cpuct),
 	cuda(0),
 	dir_eps(0.25),
@@ -11,14 +11,9 @@ Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 	root_node = new Node();
 	state     = new State();
 
-	const gsl_rng_type *T;
 	gsl_rng_env_setup();
-	T = gsl_rng_default;
-	r = gsl_rng_alloc(T);
-	gsl_rng_set(r, seed);
 
 	this->alpha = new double[SIZE];
-	dir_noise   = new double[SIZE];
 	// x = avg_game_length = SHAPE*2
 	// 10/((SIZE*x-(x**2+x)*0.5)/x)
 	std::fill(this->alpha, this->alpha+SIZE, alpha);
@@ -28,9 +23,7 @@ Cmcts::~Cmcts(void)
 {
 	delete root_node;
 	delete state;
-	gsl_rng_free(r);
 	delete[] alpha;
-	delete[] dir_noise;
 }
 
 void
@@ -75,7 +68,6 @@ void              Cmcts::set_params(std::string &file_name) { this->param_name =
 const int Cmcts::get_cuda() const { return cuda; }
 void      Cmcts::set_cuda(int cuda) { if (cuda != 1 || cuda != 0) throw std::runtime_error("Invalid value"); this->cuda = cuda; }
 
-void Cmcts::set_seed(unsigned long int seed) { gsl_rng_set(r, time(NULL)+seed); }
 const int Cmcts::get_move_cnt() const { return state->move_cnt; }
 const float Cmcts::get_winner() const { return state->winner; }
 
@@ -113,14 +105,38 @@ Cmcts::simulate(int n)
 
 		std::thread *threads = new std::thread[th_num];
 
+		try {
 		for (int i = 0; i < th_num; i++){
 			threads[i] = std::thread(&Cmcts::worker, this, n);
 		}
+		}
+		catch (const std::exception& e) {
+			// this executes if f() throws std::underflow_error (base class rule)
+			std::cout << "we1: :" << std::this_thread::get_id() << std::endl;
+			std::cout << e.what() << std::endl;
+			throw std::runtime_error("Starting threads");
+		}
+		try {
 		for (int i = 0; i< th_num; i++){
 			threads[i].join();
 		}
+		}
+		catch (const std::exception& e) {
+			// this executes if f() throws std::underflow_error (base class rule)
+			std::cout << "we2: :" << std::this_thread::get_id() << std::endl;
+			std::cout << e.what() << std::endl;
+			throw std::runtime_error("Joining threads");
+		}
 
+		try {
 		delete[] threads;
+		}
+		catch (const std::exception& e) {
+			// this executes if f() throws std::underflow_error (base class rule)
+			std::cout << "we3: :" << std::this_thread::get_id() << std::endl;
+			std::cout << e.what() << std::endl;
+			throw std::runtime_error("Deleting threads");
+		}
 	}
 	else {
 		worker(n);
@@ -133,7 +149,11 @@ void
 Cmcts::worker(int n)
 {
 	torch::NoGradGuard guard;
+	// creating random number generator for this thread
+	const gsl_rng_type *T = gsl_rng_default;
+	gsl_rng *r = gsl_rng_alloc(T);
 	std::shared_ptr<torch::jit::script::Module> module = nullptr;
+
 	if (!param_name.empty()){
 		module = torch::jit::load(param_name.c_str());
 		assert(module != nullptr);
@@ -148,17 +168,26 @@ Cmcts::worker(int n)
 	if (this->cuda)
 		module->to(at::kCUDA);
 
+	try{
 	for (int i = 0; i < n; i++){
-		search(search_state, module);
+		search(search_state, module, r);
 		search_state->clear(state);
+	}
+	}
+	catch (const std::exception& e) {
+		// this executes if f() throws std::underflow_error (base class rule)
+		std::cout << "exception running search:" << std::this_thread::get_id() << std::endl;
+		std::cout << e.what() << std::endl;
+		throw std::runtime_error("Deleting threads");
 	}
 
 	delete search_state;
+	gsl_rng_free(r);
 	return;
 }
 
 void
-Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
+Cmcts::search(State *search_state, std::shared_ptr<torch::jit::script::Module> module, gsl_rng *r)
 {
 	Node* current = root_node;
 	std::stack<Node*> nodes;
@@ -182,13 +211,15 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 		if (current->nodeN == -1){
 			/* node expansion */
 
-			/* generating dirichlet noise */
-			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			/* with heuristic */
 			if (module == nullptr){
 				value = -rollout();
-				current->set_prior(state, dir_noise, dir_eps);
+				// initializing vector of probabilities with noise
+				// this should be done inside set_prior function
+				std::lock_guard<std::mutex> lock(current->node_mutex);
+				gsl_ran_dirichlet(r, SIZE, alpha, current->childP.data());
+				current->set_prior(search_state, this->dir_eps);
 				break;
 			}
 #endif
@@ -197,7 +228,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			at::Tensor tensor;
 			try {
 				tensor = torch::from_blob(
-						(void *)state->board.data(),
+						(void *)search_state->board.data(),
 						at::IntList(sizes),
 						options);
 				tensor = tensor.toType(at::kFloat); //this will make a copy
@@ -206,9 +237,9 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				// this executes if f() throws std::underflow_error (base class rule)
 				std::cout << "e1: :" << std::this_thread::get_id() << std::endl;
 				std::cout << e.what() << std::endl;
-				std::cout << state->repr() << std::endl;
+				std::cout << search_state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
-				return;
+				throw std::runtime_error("Joining threads");
 			}
 			try {
 				if (this->cuda)
@@ -221,33 +252,37 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 				// this executes if f() throws std::underflow_error (base class rule)
 				std::cout << "e2: :" << std::this_thread::get_id() << std::endl;
 				std::cout << e.what() << std::endl;
-				std::cout << state->repr() << std::endl;
+				std::cout << search_state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
-				return;
+				throw std::runtime_error("Joining threads");
 			}
 
 			value = -output[0].toTensor().to(at::kCPU).item<float>();
-			current->set_prior(output[1].toTensor().to(at::kCPU), dir_noise, dir_eps);
+
+			std::lock_guard<std::mutex> lock(current->node_mutex);
+			gsl_ran_dirichlet(r, SIZE, alpha, current->childP.data());
+			current->set_prior(output[1].toTensor().to(at::kCPU), this->dir_eps);
+
 			break;
 		}
 
 		/* select new node, if it's leaf then expand */
 		/* select is also updating node */
-		action = current->select(state, cpuct);
-		state->make_move(action);
+		action = current->select(search_state, cpuct);
+		search_state->make_move(action);
 		nodes.push(current);
 		actions.push(action);
 
-		/* returns nullptr if reaches final state */
-		if (state->winner != -1){
+		/* returns nullptr if reaches final search_state */
+		if (search_state->winner != -1){
 			/* if game is over don't push leaf node */
 			/* so what went wrong?? game is over in the next move,
 			   therefor I have to push this node to get updates which is the winning move
-			   but I don't have to create new node with end state */
+			   but I don't have to create new node with end search_state */
 			/* player on move is the one who lost */
 			/* last node on stack is previous and that one also lost */
 			// end_state += 1;
-			if (state->winner == 0 || state->winner == 1)
+			if (search_state->winner == 0 || search_state->winner == 1)
 				value = 1.;
 			else
 				/* result is a draw (winner value is 0.5) */
