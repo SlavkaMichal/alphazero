@@ -26,7 +26,7 @@ def self_play_iteration(param_file=None, data_file=None):
     config = tools.get_param_conf()
     model_module = import_module(config.MODEL_MODULE)
     model_class = getattr(model_module, config.MODEL_CLASS)
-    model = model_class()
+    model = model_class(config)
 
     if os.path.isfile(param_file):
         logging.info("Loading model parameters from {}".format(param_file))
@@ -90,7 +90,12 @@ def self_play_iteration(param_file=None, data_file=None):
         start = datetime.now()
         tools.make_init_moves(mcts0, mcts1)
 
-        game_data = self_play_game(mcts0, mcts1, config.SIMS, config.TAU)
+        try:
+            game_data = self_play_game(mcts0, mcts1, config.SIMS, config.TAU)
+        except Exception as e:
+            logging.error("Exception raised: {}".format(e.message))
+            logging.error("Traceback: {}".format(traceback.format_exc(g)))
+            sys.exit(1)
         data.extend(game_data)
         mcts0.clear()
         mcts1.clear()

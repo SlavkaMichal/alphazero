@@ -3,6 +3,7 @@ sys.path.append('..')
 from general_config import *
 from importlib import import_module
 import cmcts
+import traceback
 import pdb
 import glob
 import os
@@ -31,13 +32,13 @@ def eval_models(param_best, param_latest):
     config_best = tools.get_param_conf()
     model_module_best = import_module(config_best.MODEL_MODULE)
     model_class_best = getattr(model_module_best, config_best.MODEL_CLASS)
-    model_best = model_class_best()
+    model_best = model_class_best(config_best)
     model_best.eval()
 
     config_latest = tools.get_versus_conf()
     model_module_latest = import_module(config_latest.MODEL_MODULE)
     model_class_latest = getattr(model_module_latest, config_latest.MODEL_CLASS)
-    model_latest = model_class_latest()
+    model_latest = model_class_latest(config_latest)
     model_latest.eval()
 
     logging.info("Best model {}".format(param_best))
@@ -113,7 +114,12 @@ def eval_models(param_best, param_latest):
 
         if i%2 == 0:
             logging.info("First player is best")
-            eval_game(mcts_best, config_best.SIMS, mcts_latest, config_latest.SIMS)
+            try:
+                eval_game(mcts_best, config_best.SIMS, mcts_latest, config_latest.SIMS)
+            except Exception as e:
+                logging.error("Exception raised: {}".format(e.message))
+                logging.error("Traceback: {}".format(traceback.format_exc(g)))
+                sys.exit(1)
             if mcts_best.winner == first_player:
                 wins_best += 1
             elif mcts_best.winner == second_player:
@@ -121,7 +127,12 @@ def eval_models(param_best, param_latest):
             else:
                 draws += 1
         else:
-            eval_game(mcts_latest, config_latest.SIMS, mcts_best, config_best.SIMS)
+            try:
+                eval_game(mcts_latest, config_latest.SIMS, mcts_best, config_best.SIMS)
+            except Exception as e:
+                logging.error("Exception raised: {}".format(e.message))
+                logging.error("Traceback: {}".format(traceback.format_exc(g)))
+                sys.exit(1)
             if mcts_best.winner == first_player:
                 wins_latest += 1
             elif mcts_best.winner == second_player:
@@ -134,8 +145,13 @@ def eval_models(param_best, param_latest):
         logging.info("Winner is {}".format(mcts_best.winner))
         logging.info("Game took {}".format(end-start))
         logging.info("Score best:{}, latest:{}, draws:{}".format(wins_best, wins_latest, draws))
-        mcts_best.clear()
-        mcts_latest.clear()
+        try:
+            mcts_best.clear()
+            mcts_latest.clear()
+        except Exception as e:
+            logging.error("Exception raised: {}".format(e.message))
+            logging.error("Traceback: {}".format(traceback.format_exc(g)))
+            sys.exit(1)
 
         logging.info("Timeout {}s >= {}s".format((end - start_eval).seconds, 60*TIMEOUT_EVAL))
         if (end - start_eval).seconds >= TIMEOUT_EVAL*60:

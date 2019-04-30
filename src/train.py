@@ -28,7 +28,7 @@ def train(param_file, new_param_file, data_files):
     config = tools.get_param_conf()
     model_module = import_module(config.MODEL_MODULE)
     model_class = getattr(model_module, config.MODEL_CLASS)
-    model = model_class()
+    model = model_class(config)
     model.train()
 
     if param_file is None or not os.path.isfile(param_file):

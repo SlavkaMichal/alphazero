@@ -337,7 +337,7 @@ def str_conf():
     s += "First config file:\n"
     for a in dir(conf1):
          if not "__" in a:
-             s += "{} = {}\n".format(a, getattr(conf1, a))
+             s += "\t{} = {}\n".format(a, getattr(conf1, a))
     if conf1.__file__ != conf2.__file__:
         s += "Second config file:\n"
         for a in dir(conf2):
