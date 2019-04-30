@@ -121,10 +121,13 @@ def eval_models(param_best, param_latest):
                 logging.error("Traceback: {}".format(traceback.format_exc(g)))
                 sys.exit(1)
             if mcts_best.winner == first_player:
+                logging.info("Winner is best")
                 wins_best += 1
             elif mcts_best.winner == second_player:
+                logging.info("Winner is latest")
                 wins_latest += 1
             else:
+                logging.info("draw")
                 draws += 1
         else:
             try:
@@ -134,10 +137,13 @@ def eval_models(param_best, param_latest):
                 logging.error("Traceback: {}".format(traceback.format_exc(g)))
                 sys.exit(1)
             if mcts_best.winner == first_player:
+                logging.info("Winner is best")
                 wins_latest += 1
             elif mcts_best.winner == second_player:
+                logging.info("Winner is latest")
                 wins_best += 1
             else:
+                logging.info("draw")
                 draws += 1
 
         end = datetime.now()
@@ -213,7 +219,13 @@ if __name__ == "__main__":
         print("Best and latest are the same")
         sys.exit(1)
 
-    if eval_models(param_best, param_latest):
+    rc = True
+    try:
+        rc = eval_models(param_best, param_latest)
+    except Exception as e:
+        logging.error("Exception raised: {}".format(e.message))
+        logging.error("Traceback: {}".format(traceback.format_exc(g)))
+    if rc:
         print("Evluation of params {} and {} finished successfuly"
                 .format(param_best, param_latest))
     else:
