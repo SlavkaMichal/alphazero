@@ -8,15 +8,17 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
   -e, --eval\tevaluate current best nn against latest\n\n
  OPTIONS\n
   -o, --param=[PARAM FILE]\tparameters that will be used for each action,\n
-                          \t\t\t\tif -e is specified -v is required\n\n
-  -v, --versus=[PARAM FILE]\tmodel parameters that will be used for evaluation
+                          \t\t\t\tif -e is specified -v is required\n
+  -v, --versus=[PARAM FILE]\tmodel parameters that will be used for evaluation\n
                            \t\t\t\tagainst other supplied parameters\n
-  -a  --conf-param=[PARAM FILE]
-  -b  --conf-versus=[PARAM FILE]
+  -a  --conf-param=[PARAM FILE]\tspecify configuration file\n
+  -b  --conf-versus=[PARAM FILE]\tspecify configuration file for oponent\n
+  -n  --dry-run\t\t\tdo not create new generation or set new best parameters\n
+  -g  --generation\t\tnew generation\n
   -d, --data=[DATA LIST]\t\tcoma-separated list of data files, NO SPACES can be used\n
   -c, --config=[CONFIG NAME]\tload configuration file and architecture,\n
-                            \t\t\t\tif in combination with --train original configuration will be restored\n\n
-  -r, --restore\trestore last configureation file\n
+                            \t\t\t\tif in combination with --train original configuration will be restored\n
+  -r, --restore\t\t\trestore last configureation file\n
   -i, --sequence=[SEQ NUMBER]\tif running multiple scripts at once it's good to add sequence number\n
   -h, --help\t\t\tprint this\n
   -p, --python=[PYTHON]\t\tpath to python interpret\n\n
