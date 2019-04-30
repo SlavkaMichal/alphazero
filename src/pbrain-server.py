@@ -48,7 +48,7 @@ def main():
         traced_script_module = torch.jit.trace(model, example)
 
     traced_script_module.save(jit_model_name)
-    mcts = cmcts.mcts(seed=rand_uint32(), cpuct=CPUCT)
+    mcts = cmcts.mcts(cpuct=CPUCT)
     mcts.set_alpha_default()
     mcts.set_threads(THREADS)
     mcts.set_params(jit_model_name)
