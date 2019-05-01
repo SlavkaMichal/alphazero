@@ -59,6 +59,7 @@ public:
 	/* for debugging purposes */
 	void print_node(std::vector<int> &v);
 	void print_u(std::vector<int> &v);
+	int binary;
 
 #ifdef HEUR
 	py::array_t<float> get_heur();

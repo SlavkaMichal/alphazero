@@ -8,8 +8,11 @@ int main()
 {
 //	py::scoped_interpreter guard{};
 
-	Cmcts mcts = Cmcts(1, 0.5, 5);
+	Cmcts mcts = Cmcts(0.5, 5);
 	std::string file ="/home/michal/workspace/bp/alphazero/src/simplerNN13.pt";
+	mcts.binary = 1;
+	mcts.set_threads(4);
+	mcts.set_alpha_default();
 	mcts.set_params(file);
 	mcts.simulate(10);
 	mcts.make_move(0);

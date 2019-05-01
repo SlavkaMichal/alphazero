@@ -6,7 +6,8 @@ Cmcts::Cmcts(double alpha, double cpuct) :
 	cpuct(cpuct),
 	cuda(0),
 	dir_eps(0.25),
-	threads(0)
+	threads(0),
+	binary(0)
 {
 	root_node = new Node();
 	state     = new State();
@@ -91,7 +92,9 @@ Cmcts::simulate(int n)
 #endif
 
 	// divide workload
-	py::gil_scoped_release release;
+	if (!binary)
+		py::gil_scoped_release release;
+
 	if (threads > 1){
 		int th_num = threads;
 		if (n < th_num){
