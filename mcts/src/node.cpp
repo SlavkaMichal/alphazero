@@ -24,8 +24,9 @@ Node::
 }
 
 void Node::
-set_prior(torch::Tensor p, double dir_eps)
+set_prior(torch::Tensor p, gsl_rng *r, const double *alpha, double dir_eps)
 {
+	std::lock_guard<std::mutex> lock(node_mutex);
 	if (nodeN != -1){
 		// some other thread did the job
 		return;
@@ -34,12 +35,11 @@ set_prior(torch::Tensor p, double dir_eps)
 	// copy result
 	// TODO som si isty ze toto ide aj lepsie
 
+	gsl_ran_dirichlet(r, childP.size(), alpha, childP.data());
 	double prior_eps = 1. - dir_eps;
-	double sum = 0.;
 	for (int i = 0; i < childP.size(); i++){
 		// dir sum to 1 also p should
 		childP[i] = prior_eps*exp(ptr[i]) + dir_eps*childP[i];
-		sum += childP[i];
 	}
 
 	nodeN = 0;
@@ -48,14 +48,16 @@ set_prior(torch::Tensor p, double dir_eps)
 
 #ifdef HEUR
 void Node::
-set_prior(State *state, double dir_eps)
+set_prior(State *state, gsl_rng *r, const double *alpha, const double dir_eps)
 {
 	float sum = 0.;
+	std::lock_guard<std::mutex> lock(node_mutex);
 	// check if node wasn't already explored
 	if (nodeN != -1){
 		return;
 	}
 
+	gsl_ran_dirichlet(r, childP.size(), alpha, childP.data());
 	for (int i = 0; i < childP.size(); i++){
 		childP[i] = state->hboard[SIZE+i]+state->hboard[SIZE+i];
 		sum += childP[i];

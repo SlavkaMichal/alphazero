@@ -105,38 +105,14 @@ Cmcts::simulate(int n)
 
 		std::thread *threads = new std::thread[th_num];
 
-		try {
 		for (int i = 0; i < th_num; i++){
 			threads[i] = std::thread(&Cmcts::worker, this, n);
 		}
-		}
-		catch (const std::exception& e) {
-			// this executes if f() throws std::underflow_error (base class rule)
-			std::cout << "we1: :" << std::this_thread::get_id() << std::endl;
-			std::cout << e.what() << std::endl;
-			throw std::runtime_error("Starting threads");
-		}
-		try {
 		for (int i = 0; i< th_num; i++){
 			threads[i].join();
 		}
-		}
-		catch (const std::exception& e) {
-			// this executes if f() throws std::underflow_error (base class rule)
-			std::cout << "we2: :" << std::this_thread::get_id() << std::endl;
-			std::cout << e.what() << std::endl;
-			throw std::runtime_error("Joining threads");
-		}
 
-		try {
 		delete[] threads;
-		}
-		catch (const std::exception& e) {
-			// this executes if f() throws std::underflow_error (base class rule)
-			std::cout << "we3: :" << std::this_thread::get_id() << std::endl;
-			std::cout << e.what() << std::endl;
-			throw std::runtime_error("Deleting threads");
-		}
 	}
 	else {
 		worker(n);
@@ -176,7 +152,7 @@ Cmcts::worker(int n)
 	}
 	catch (const std::exception& e) {
 		// this executes if f() throws std::underflow_error (base class rule)
-		std::cout << "exception running search:" << std::this_thread::get_id() << std::endl;
+		std::cout << "Exception running search: " << std::this_thread::get_id() << std::endl;
 		std::cout << e.what() << std::endl;
 		throw std::runtime_error("Deleting threads");
 	}
@@ -217,21 +193,25 @@ Cmcts::search(State *search_state, std::shared_ptr<torch::jit::script::Module> m
 				value = -rollout();
 				// initializing vector of probabilities with noise
 				// this should be done inside set_prior function
-				std::lock_guard<std::mutex> lock(current->node_mutex);
-				gsl_ran_dirichlet(r, SIZE, alpha, current->childP.data());
-				current->set_prior(search_state, this->dir_eps);
+				current->set_prior(search_state, r, alpha, dir_eps);
 				break;
 			}
 #endif
 			/* no heuristic */
 			/* create tensor wraper around buffer */
 			at::Tensor tensor;
-			try {
-				tensor = torch::from_blob(
-						(void *)search_state->board.data(),
-						at::IntList(sizes),
-						options);
-				tensor = tensor.toType(at::kFloat); //this will make a copy
+			tensor = torch::from_blob(
+					(void *)search_state->board.data(),
+					at::IntList(sizes),
+					options);
+			tensor = tensor.toType(at::kFloat); //this will make a copy
+
+			if (this->cuda)
+				tensor.to(at::kCUDA);
+			input.push_back(tensor);
+			/* evaluate model */
+			try{
+			output = module->forward(input).toTuple()->elements();
 			}
 			catch (const std::exception& e) {
 				// this executes if f() throws std::underflow_error (base class rule)
@@ -239,14 +219,13 @@ Cmcts::search(State *search_state, std::shared_ptr<torch::jit::script::Module> m
 				std::cout << e.what() << std::endl;
 				std::cout << search_state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
-				throw std::runtime_error("Joining threads");
+				throw std::runtime_error("Forward failed");
 			}
-			try {
-				if (this->cuda)
-					tensor.to(at::kCUDA);
-				input.push_back(tensor);
-				/* evaluate model */
-				output = module->forward(input).toTuple()->elements();
+
+			value = -output[0].toTensor().to(at::kCPU).item<float>();
+
+			try{
+			current->set_prior(output[1].toTensor().to(at::kCPU), r, alpha, dir_eps);
 			}
 			catch (const std::exception& e) {
 				// this executes if f() throws std::underflow_error (base class rule)
@@ -254,14 +233,8 @@ Cmcts::search(State *search_state, std::shared_ptr<torch::jit::script::Module> m
 				std::cout << e.what() << std::endl;
 				std::cout << search_state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
-				throw std::runtime_error("Joining threads");
+				throw std::runtime_error("Smthing else");
 			}
-
-			value = -output[0].toTensor().to(at::kCPU).item<float>();
-
-			std::lock_guard<std::mutex> lock(current->node_mutex);
-			gsl_ran_dirichlet(r, SIZE, alpha, current->childP.data());
-			current->set_prior(output[1].toTensor().to(at::kCPU), this->dir_eps);
 
 			break;
 		}
