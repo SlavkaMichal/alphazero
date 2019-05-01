@@ -15,6 +15,7 @@ HELP="Usage: bash $0 [ACTION] [OPTION] [--python=[PYTHON INTERPRETER]\n\n
   -b  --conf-versus=[PARAM FILE]\tspecify configuration file for oponent\n
   -n  --dry-run\t\t\tdo not create new generation or set new best parameters\n
   -g  --generation\t\tnew generation\n
+  -q  --set-best\t\tset best parameters to latest (can be combined with -v parameter)\n
   -d, --data=[DATA LIST]\t\tcoma-separated list of data files, NO SPACES can be used\n
   -c, --config=[CONFIG NAME]\tload configuration file and architecture,\n
                             \t\t\t\tif in combination with --train original configuration will be restored\n
@@ -112,6 +113,11 @@ do
 		else
 			echo "Temporary configuration file does not exists"
 		fi
+		shift
+		exit
+		;;
+	-q| --set-best)
+		$PYTHON -c "import src.tools as t; t.set_best(t.get_latest())"
 		shift
 		exit
 		;;
