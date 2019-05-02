@@ -54,6 +54,7 @@ State::clear(const State *obj)
 	move_cnt = obj->move_cnt;
 	winner   = obj->winner;
 	board    = obj->board;
+	moves    = obj->moves;
 #ifdef HEUR
 	hboard   = obj->hboard;
 #endif
@@ -66,6 +67,7 @@ State::clear()
 	player   = 0;
 	move_cnt = 0;
 	winner   = -1;
+	moves.clear();
 
 	std::fill(board.begin(), board.end(), 0);
 #ifdef HEUR
@@ -86,6 +88,7 @@ State::make_move(int action)
 	board.at(player*SIZE + action) = 1;
 	player = player ? 0 : 1;
 	move_cnt += 1;
+	moves.push_back(action);
 
 	end = is_end();
 
@@ -125,6 +128,11 @@ State::repr()
 		s.append("Winner: draw\n");
 
 	s.append("Move count: "+std::to_string(move_cnt)+"\n");
+	s.append("Moves: ");
+	for (int i = 0; i < moves.size(); ++i){
+		s.append(std::to_string(moves[i])+", ");
+	}
+	s.append("\n");
 	s.append("Board size: "+std::to_string(SIZE)+"\n");
 	s.append("Board:\n");
 	for (int i=0; i<SHAPE; i++){
