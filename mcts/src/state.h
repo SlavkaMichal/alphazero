@@ -42,6 +42,7 @@ struct State{
 	int player;
 	int move_cnt;
 	float winner;
+	std::vector<int> moves;
 };
 
 #endif
