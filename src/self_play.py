@@ -88,7 +88,8 @@ def self_play_iteration(param_file=None, data_file=None):
     while len(data) < TRAIN_SAMPLES:
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
-        tools.make_init_moves(mcts0, mcts1)
+        tools.make_init_moves(mcts0, INIT_MOVES)
+        tools.make_init_moves(mcts1, INIT_MOVES)
 
         try:
             game_data = self_play_game(mcts0, mcts1, config.SIMS, config.TAU)

@@ -100,7 +100,8 @@ def eval_models(param_best, param_latest):
     logging.info("Starting at {}".format(start_eval))
 
     # figuring out which player will move first
-    tools.make_init_moves(mcts_best, mcts_latest)
+    tools.make_init_moves(mcts_best, INIT_MOVES)
+    tools.make_init_moves(mcts_latest, INIT_MOVES)
     first_player = mcts_best.player
     second_player = 0 if mcts_best.player == 1 else 1
     logging.info("First player is {}".format(first_player))
@@ -110,7 +111,8 @@ def eval_models(param_best, param_latest):
     for i in range(EVAL_GAMES):
         logging.info("Playing game: {}".format(i))
         start = datetime.now()
-        tools.make_init_moves(mcts_best, mcts_latest)
+        tools.make_init_moves(mcts_best, INIT_MOVES)
+        tools.make_init_moves(mcts_latest, INIT_MOVES)
 
         if i%2 == 0:
             logging.info("First player is best")
