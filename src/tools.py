@@ -38,25 +38,9 @@ def repr_pi(pi):
         p += "\n"
     return p
 
-def make_init_moves(mcts0, mcts1):
-    return
-    mcts0.make_move(85)
-    mcts1.make_move(85)
-
-    mcts0.make_move(98)
-    mcts1.make_move(98)
-
-    mcts0.make_move(86)
-    mcts1.make_move(86)
-
-    mcts0.make_move(84)
-    mcts1.make_move(84)
-
-    mcts0.make_move(112)
-    mcts1.make_move(112)
-
-    mcts0.make_move(70)
-    mcts1.make_move(70)
+def make_init_moves(mcts, moves):
+    for m in moves:
+        mcts.make_move(m)
     return
 
 def get_unique(data):
