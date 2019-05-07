@@ -45,9 +45,9 @@ def eval_models(param_best, param_latest):
     logging.info("Latest model {}".format(param_latest))
     if os.path.isfile(param_best) and os.path.isfile(param_latest):
         logging.info("Loading model parameters from {}".format(param_best))
-        param_best_loaded = torch.load(param_best)
+        param_best_loaded = torch.load(param_best, map_location='cpu')
         logging.info("Loading model parameters from {}".format(param_latest))
-        param_latest_loaded = torch.load(param_latest)
+        param_latest_loaded = torch.load(param_latest, map_location='cpu')
     else:
         logging.info("No parameters provided")
         return False
@@ -137,7 +137,7 @@ def eval_models(param_best, param_latest):
             except Exception as e:
                 logging.error("Exception raised: {}".format(e.message))
                 logging.error("Traceback: {}".format(traceback.format_exc(g)))
-                sys.exit(1)
+                sys.exit(2)
             if mcts_best.winner == first_player:
                 logging.info("Winner is best")
                 wins_latest += 1
@@ -159,7 +159,7 @@ def eval_models(param_best, param_latest):
         except Exception as e:
             logging.error("Exception raised: {}".format(e.message))
             logging.error("Traceback: {}".format(traceback.format_exc(g)))
-            sys.exit(1)
+            sys.exit(3)
 
         logging.info("Timeout {}s >= {}s".format((end - start_eval).seconds, 60*TIMEOUT_EVAL))
         if (end - start_eval).seconds >= TIMEOUT_EVAL*60:
@@ -185,6 +185,7 @@ def eval_models(param_best, param_latest):
     return True
 
 def eval_game(mcts_first, sims_first, mcts_second, sims_second):
+    logging.info("Evaluation start")
     for i in range(SIZE):
         mcts_first.simulate(sims_first)
         pi = mcts_first.get_prob()

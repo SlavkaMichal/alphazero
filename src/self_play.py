@@ -30,7 +30,7 @@ def self_play_iteration(param_file=None, data_file=None):
 
     if os.path.isfile(param_file):
         logging.info("Loading model parameters from {}".format(param_file))
-        params = torch.load(param_file)
+        params = torch.load(param_file, map_location='cpu')
         try:
             model.load_state_dict(params['state_dict'])
         except RuntimeError as e:

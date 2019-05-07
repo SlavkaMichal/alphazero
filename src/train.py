@@ -37,7 +37,11 @@ def train(param_file, new_param_file, data_files):
     else:
         print(param_file)
         try:
-            params = torch.load(param_file)
+            if not torch.cuda.is_available():
+                params = torch.load(param_file, map_location='cpu')
+            else:
+                params = torch.load(param_file)
+
             if cuda:
                 model.load_state_dict(params['state_dict']).cuda()
                 logging.info("GPU {}",torch.cuda.get_device_name())

@@ -35,7 +35,7 @@ def main():
     server = Server(args.ip, args.port)
     mcts = cmcts.mcts()
     param_file = tools.get_params()
-    params = torch.load(param_file)
+    params = torch.load(param_file, map_location='cpu')
     model_class = getattr(model_module, MODEL_CLASS)
     model = model_class()
     model.load_state_dict(params['state_dict'])
