@@ -32,6 +32,9 @@ VIEW_STEP = 20
 ##############################################################################
 #                                   general                                  #
 ##############################################################################
+# play intial moves
+INIT_MOVES = [] # [85, 98, 86, 84, 112, 70, 87]
+
 # project root
 ROOT = os.path.dirname(os.path.realpath(__file__))
 # path to neural network parameters
@@ -81,9 +84,9 @@ if 'PROC_NUM' in os.environ:
 
 # installation prefix
 #  meta and merlin
-PREFIX = "{}/.local".format(os.path.dirname(ROOT))
+#PREFIX = "{}/.local".format(os.path.dirname(ROOT))
 #my pc
-#PREFIX = "{}/.local".format(os.environ['HOME'])
+PREFIX = "{}/.local".format(os.environ['HOME'])
 
 # test if pytorch is available
 INSTALL_PYTORCH = False

@@ -66,13 +66,13 @@ def self_play_iteration(param_file=None, data_file=None):
     traced_script_module.save(jit_model_name)
 
     logging.info("MCTS initialised with alpha default, cpuct {}".format(config.CPUCT))
-    mcts0 = cmcts.mcts(seed=rand_uint32(), cpuct=config.CPUCT)
+    mcts0 = cmcts.mcts(cpuct=config.CPUCT)
     mcts0.set_alpha_default()
     mcts0.set_threads(THREADS)
     mcts0.set_params(jit_model_name)
     mcts0.eps = config.EPS
 
-    mcts1 = cmcts.mcts(seed=rand_uint32(), cpuct=config.CPUCT)
+    mcts1 = cmcts.mcts(cpuct=config.CPUCT)
     mcts1.set_alpha_default()
     mcts1.set_threads(THREADS)
     mcts1.set_params(jit_model_name)

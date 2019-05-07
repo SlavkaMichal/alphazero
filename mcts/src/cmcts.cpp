@@ -2,7 +2,7 @@
 
 namespace py = pybind11;
 
-Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
+Cmcts::Cmcts(double alpha, double cpuct) :
 	cpuct(cpuct),
 	cuda(0),
 	dir_eps(0.25),
@@ -15,7 +15,6 @@ Cmcts::Cmcts(uint64_t seed, double alpha, double cpuct) :
 	gsl_rng_env_setup();
 	T = gsl_rng_default;
 	r = gsl_rng_alloc(T);
-	gsl_rng_set(r, seed);
 
 	this->alpha = new double[SIZE];
 	dir_noise   = new double[SIZE];
@@ -75,7 +74,6 @@ void              Cmcts::set_params(std::string &file_name) { this->param_name =
 const int Cmcts::get_cuda() const { return cuda; }
 void      Cmcts::set_cuda(int cuda) { if (cuda != 1 || cuda != 0) throw std::runtime_error("Invalid value"); this->cuda = cuda; }
 
-void Cmcts::set_seed(unsigned long int seed) { gsl_rng_set(r, time(NULL)+seed); }
 const int Cmcts::get_move_cnt() const { return state->move_cnt; }
 const float Cmcts::get_winner() const { return state->winner; }
 

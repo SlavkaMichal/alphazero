@@ -26,7 +26,7 @@
 
 struct Cmcts{
 public:
-	Cmcts(uint64_t seed, double alpha, double cpuct);
+	Cmcts(double alpha, double cpuct);
 	~Cmcts(void);
 
 	void make_move(int action);      // change root_node by taking action
@@ -51,7 +51,6 @@ public:
 	const double      get_eps() const;
 	void              set_cpuct(float cpuct);
 	const float       get_cpuct() const;
-	void              set_seed(unsigned long int seed);
 	void              set_alpha_default();
 	const float       get_winner() const;
 	const int         get_move_cnt() const;
