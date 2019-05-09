@@ -275,18 +275,14 @@ State::is_end()
 void
 State::rollout_move()
 {
-	double max  = 0;
-	double heur = 0;
 	int action  = 0;
 
-	for (int a = 0; a < SIZE; a++){
-		if (is_valid(a)){
-			heur = hboard[a]+hboard[SIZE+a];
-			if (max < heur){
-				max = heur;
-				action = a;
-			}
-		}
+	if (this->winner != -1.)
+		return;
+	while(1){
+		action = rand()%SIZE;
+		if (is_valid(action))
+			break;
 	}
 
 	make_move(action);

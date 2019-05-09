@@ -82,13 +82,20 @@ def eval_models(param_best, param_latest):
     mcts_best = cmcts.mcts(cpuct=config_best.CPUCT)
     mcts_best.set_alpha_default()
     mcts_best.set_threads(THREADS)
-    mcts_best.set_params(jit_model_best)
+    if config_best.USE_NN:
+        mcts_best.set_params(jit_model_best)
+    else:
+        logging.info("Best running with heuristics")
     mcts_best.eps = config_best.EPS
 
     mcts_latest = cmcts.mcts(cpuct=config_latest.CPUCT)
     mcts_latest.set_alpha_default()
     mcts_latest.set_threads(THREADS)
-    mcts_latest.set_params(jit_model_latest)
+    if not config_latest.USE_NN:
+        mcts_latest.set_params(jit_model_latest)
+    else:
+        logging.info("Latest running with heuristics")
+
     mcts_latest.eps = config_latest.EPS
 
     wins_best   = 0

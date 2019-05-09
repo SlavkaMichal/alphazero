@@ -69,13 +69,15 @@ def self_play_iteration(param_file=None, data_file=None):
     mcts0 = cmcts.mcts(cpuct=config.CPUCT)
     mcts0.set_alpha_default()
     mcts0.set_threads(THREADS)
-    mcts0.set_params(jit_model_name)
+    if config.USE_NN:
+        mcts0.set_params(jit_model_name)
     mcts0.eps = config.EPS
 
     mcts1 = cmcts.mcts(cpuct=config.CPUCT)
     mcts1.set_alpha_default()
     mcts1.set_threads(THREADS)
-    mcts1.set_params(jit_model_name)
+    if config.USE_NN:
+        mcts1.set_params(jit_model_name)
     mcts1.eps = config.EPS
 
     # dtype should be always dtype of input tensor
