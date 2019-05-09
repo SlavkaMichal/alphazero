@@ -18,7 +18,7 @@ TIMEOUT_SELF_PLAY = 1
 EVAL_GAMES = 50
 
 # max evaluation time in minutes
-TIMEOUT_EVAL = 2
+TIMEOUT_EVAL = 1
 
 # percentual wins for new neural network to replace current best
 EVAL_TRESHOLD = 0.6
@@ -120,7 +120,7 @@ SIZE = SHAPE*SHAPE
 CUDA = False
 
 # compile with support for heuristic and rollout
-HEUR = False
+HEUR = True
 
 # debug output
 DEBUG = True

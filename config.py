@@ -62,5 +62,7 @@ TAU = 10
 CPUCT = 4.
 
 # number of threads
-THREADS = 8
+THREADS = 4
 
+# use neural network
+USE_NN = True
