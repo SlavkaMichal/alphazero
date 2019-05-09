@@ -8,8 +8,8 @@ from glob import glob
 import os
 from datetime import datetime
 from importlib import import_module
+from random import shuffle
 import torch
-import cmcts
 import shutil
 from general_config import *
 import general_config as gc
@@ -110,6 +110,7 @@ def get_versus():
     """ returns parameters against which will be best model playing
     """
     if 'VERSUS' in os.environ:
+        print("Getting parameters from enviroment")
         params = get_param_file(os.environ['VERSUS'])
     else:
         params = get_latest()
@@ -122,6 +123,7 @@ def get_data():
         also removes obsolete data
     """
     conf = get_param_conf()
+    window = 0
     if 'DATA' in os.environ:
         data = os.environ['DATA'].split(',')
         data = [ d.strip() for d in data ]
@@ -156,8 +158,27 @@ def get_data():
             data_files.extend(glob("{}/*.npy".format(os.path.realpath(d))))
         else:
             data_files.append(os.path.realpath(d))
+    shuffle(data_files)
+    data_lists = []
+    cnt = len(data_files)//window
+    print("Total data files:    {}".format(len(data_files)))
+    print("Data files in chunk: {}".format(cnt))
+    print("Window size:         {}".format(window))
+    chunks = [ data_files[x:x+cnt] for x in range(0,len(data_files),cnt) ]
 
-    return data_files
+    return chunks
+
+def load_data(chunk):
+    data_list = []
+    for d in chunk:
+        try:
+            data_list.append(np.load(d))
+        except ValueError as e:
+            logging.error("Could not load file {}".format(d))
+            continue
+
+    return np.concatenate(data_list)
+
 
 def rm(files):
     if type(files) is list:
@@ -316,8 +337,6 @@ def str_conf():
     conf1 = get_param_conf()
     conf2 = get_versus_conf()
     s = ""
-    s += "CMCTS commit {}\n".format(cmcts.version())
-    s += "CMCTS timestamp {}\n".format(cmcts.build_timestamp())
     s += "First config file:\n"
     for a in dir(conf1):
          if not "__" in a:
