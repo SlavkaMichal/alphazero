@@ -37,13 +37,13 @@ def eval_models(param_best, param_latest):
     logging.info("MCTS from: {}".format(cmcts.__file__))
     print(tools.str_conf())
 
-    if not config_best.USE_NN:
+    if config_best.USE_NN:
         model_module_best = import_module(config_best.MODEL_MODULE)
         model_class_best = getattr(model_module_best, config_best.MODEL_CLASS)
         model_best = model_class_best(config_best)
         model_best.eval()
 
-    if not config_latest.USE_NN:
+    if config_latest.USE_NN:
         model_module_latest = import_module(config_latest.MODEL_MODULE)
         model_class_latest = getattr(model_module_latest, config_latest.MODEL_CLASS)
         model_latest = model_class_latest(config_latest)
@@ -61,7 +61,7 @@ def eval_models(param_best, param_latest):
         logging.info("Loading model parameters from {}".format(param_latest))
         param_latest_loaded = torch.load(param_latest, map_location='cpu')
     elif config_latest.USE_NN:
-        logging.info("No parameters provided for latest {}".format(param_best)
+        logging.info("No parameters provided for latest {}".format(param_best))
         return False
 
     jit_model_best = "{}/tmp_{}_best.pt".format(
@@ -98,21 +98,24 @@ def eval_models(param_best, param_latest):
     mcts_best = cmcts.mcts(cpuct=config_best.CPUCT)
     mcts_best.set_alpha_default()
     mcts_best.set_threads(THREADS)
+    mcts_best.eps = config_best.EPS
     if config_best.USE_NN:
         mcts_best.set_params(jit_model_best)
     else:
         logging.info("Best running with heuristics")
-    mcts_best.eps = config_best.EPS
 
     mcts_latest = cmcts.mcts(cpuct=config_latest.CPUCT)
     mcts_latest.set_alpha_default()
     mcts_latest.set_threads(THREADS)
-    if not config_latest.USE_NN:
+    mcts_latest.eps = config_latest.EPS
+    if config_latest.USE_NN:
         mcts_latest.set_params(jit_model_latest)
     else:
         logging.info("Latest running with heuristics")
 
-    mcts_latest.eps = config_latest.EPS
+    logging.info("Current MCTS configuration:")
+    logging.info("MCTS best:\n{}".format(mcts_best))
+    logging.info("MCTS latest:\n{}".format(mcts_latest))
 
     wins_best   = 0
     wins_latest = 0
