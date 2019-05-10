@@ -9,8 +9,32 @@
 deduced automatically you have to adjust it in `mcts/CMakeLists.txt`
 accordingly
 
-### Config:
+#### Config:
 * PREFIX - local installation of python packages and other dependecies
+
+### Run script:
+* run `./run.sh [ACTION] [OPTIONS]`
+#### Actions:
+* `-s` or `--self-play`		data generation
+* `-t` or `--train`		optimalisation
+* `-e` or `--eval`		compare latest parameters with best
+* `-g` or `--generation`	creates new file for data
+* `-q` or `--set-best`		set latest parameters as the best
+* `-r` or `--restore`		restores temporary configuration file
+* `-c` or `--config=[FILE]`	sets FILE as root config and stres current configuration in temporary file
+
+#### OPTIONS
+* `-p` or `--python`	python interpreter
+* `-o` or `--param=[FILE]`	parameter file to be used
+* `-v` or `--versus=[FILE]`	oponent parameter file to be used
+* `-a` or `--conf-param=[FILE]`	use configuration file
+* `-b` or `--conf-versus=[FILE]` use configuration file
+* `-n` or `--dry-run`	do not change best parameters
+* `-d` or `--data=[FILE|DIR]`	data for training, coma separated list
+* `-i` or `--sequence=[NUM]`	sequence nuber, good idea when starting
+multiple processes at the same time
+* `-h` or `--help`	prints help
+
 
 ### Generate data:
 * adjust config:
