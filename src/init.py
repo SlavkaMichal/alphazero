@@ -25,7 +25,7 @@ mcts = cmcts.mcts(cpuct=conf.CPUCT)
 model = model_class(conf)
 example = torch.rand(1,2,SHAPE,SHAPE)
 param_file = tools.get_params()
-params = torch.load(param_file)
+params = torch.load(param_file, map_location='cpu')
 model.load_state_dict(params['state_dict'])
 with torch.no_grad():
     traced_script_module = torch.jit.trace(model, example)

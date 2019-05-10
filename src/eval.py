@@ -16,6 +16,14 @@ from datetime import datetime
 import re
 
 def eval_models(param_best, param_latest):
+
+    config_best = tools.get_param_conf()
+    config_latest = tools.get_versus_conf()
+
+    if not config_best.USE_NN:
+        param_best = "heuristic{}sims".format(config_best.SIMS)
+    if not config_latest.USE_NN:
+        param_latest = "heuristic{}sims".format(config_latest.SIMS)
     log_file = "{}/eval_{}_{}.log".format(
             LOG_PATH,
             os.path.basename(param_best).replace(".pyt",''),
@@ -29,27 +37,31 @@ def eval_models(param_best, param_latest):
     logging.info("MCTS from: {}".format(cmcts.__file__))
     print(tools.str_conf())
 
-    config_best = tools.get_param_conf()
-    model_module_best = import_module(config_best.MODEL_MODULE)
-    model_class_best = getattr(model_module_best, config_best.MODEL_CLASS)
-    model_best = model_class_best(config_best)
-    model_best.eval()
+    if not config_best.USE_NN:
+        model_module_best = import_module(config_best.MODEL_MODULE)
+        model_class_best = getattr(model_module_best, config_best.MODEL_CLASS)
+        model_best = model_class_best(config_best)
+        model_best.eval()
 
-    config_latest = tools.get_versus_conf()
-    model_module_latest = import_module(config_latest.MODEL_MODULE)
-    model_class_latest = getattr(model_module_latest, config_latest.MODEL_CLASS)
-    model_latest = model_class_latest(config_latest)
-    model_latest.eval()
+    if not config_latest.USE_NN:
+        model_module_latest = import_module(config_latest.MODEL_MODULE)
+        model_class_latest = getattr(model_module_latest, config_latest.MODEL_CLASS)
+        model_latest = model_class_latest(config_latest)
+        model_latest.eval()
 
     logging.info("Best model {}".format(param_best))
     logging.info("Latest model {}".format(param_latest))
-    if os.path.isfile(param_best) and os.path.isfile(param_latest):
+    if os.path.isfile(param_best) and config_best.USE_NN:
         logging.info("Loading model parameters from {}".format(param_best))
         param_best_loaded = torch.load(param_best, map_location='cpu')
+    elif config_best.USE_NN:
+        logging.info("No parameters provided for best {}".format(param_best))
+        return False
+    if os.path.isfile(param_latest) and config_latest.USE_NN:
         logging.info("Loading model parameters from {}".format(param_latest))
         param_latest_loaded = torch.load(param_latest, map_location='cpu')
-    else:
-        logging.info("No parameters provided")
+    elif config_latest.USE_NN:
+        logging.info("No parameters provided for latest {}".format(param_best)
         return False
 
     jit_model_best = "{}/tmp_{}_best.pt".format(
@@ -60,24 +72,28 @@ def eval_models(param_best, param_latest):
             os.path.basename(param_latest).replace(".pyt",''))
     example = torch.rand(1,2,SHAPE,SHAPE)
 
-    model_best.load_state_dict(param_best_loaded['state_dict'])
-    if CUDA:
-        example.cuda()
-        model_best.cuda()
-        model_latest.cuda()
+    if config_best.USE_NN:
+        model_best.load_state_dict(param_best_loaded['state_dict'])
+        if CUDA:
+            example.cuda()
+            model_best.cuda()
 
-    with torch.no_grad():
-        traced_script_module = torch.jit.trace(model_best, example)
+        with torch.no_grad():
+            traced_script_module = torch.jit.trace(model_best, example)
 
-    logging.info("Saving best model to {}".format(jit_model_best))
-    traced_script_module.save(jit_model_best)
-    model_latest.load_state_dict(param_latest_loaded['state_dict'])
+        logging.info("Saving best model to {}".format(jit_model_best))
+        traced_script_module.save(jit_model_best)
 
-    with torch.no_grad():
-        traced_script_module = torch.jit.trace(model_latest, example)
+    if config_latest.USE_NN:
+        model_latest.load_state_dict(param_latest_loaded['state_dict'])
+        if CUDA:
+            model_latest.cuda()
 
-    logging.info("Saving latest model to {}".format(jit_model_latest))
-    traced_script_module.save(jit_model_latest)
+        with torch.no_grad():
+            traced_script_module = torch.jit.trace(model_latest, example)
+
+        logging.info("Saving latest model to {}".format(jit_model_latest))
+        traced_script_module.save(jit_model_latest)
 
     mcts_best = cmcts.mcts(cpuct=config_best.CPUCT)
     mcts_best.set_alpha_default()
