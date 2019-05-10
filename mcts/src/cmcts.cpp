@@ -1,5 +1,4 @@
 #include "cmcts.h"
-#include <ctime>
 
 namespace py = pybind11;
 
@@ -11,7 +10,6 @@ Cmcts::Cmcts(double alpha, double cpuct) :
 {
 	root_node = new Node();
 	state     = new State();
-	srand(time(NULL));
 
 	const gsl_rng_type *T;
 	gsl_rng_env_setup();
@@ -195,23 +193,31 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			/* no heuristic */
 			/* create tensor wraper around buffer */
 			at::Tensor tensor;
-			tensor = torch::from_blob(
-					(void *)state->board.data(),
-					at::IntList(sizes),
-					options);
-			tensor = tensor.toType(at::kFloat); //this will make a copy
-
-			if (this->cuda)
-				tensor.to(at::kCUDA);
-
-			input.push_back(tensor);
 			try {
+				tensor = torch::from_blob(
+						(void *)state->board.data(),
+						at::IntList(sizes),
+						options);
+				tensor = tensor.toType(at::kFloat); //this will make a copy
+			}
+			catch (const std::exception& e) {
+				// this executes if f() throws std::underflow_error (base class rule)
+				std::cout << "e1: :" << std::this_thread::get_id() << std::endl;
+				std::cout << e.what() << std::endl;
+				std::cout << state->repr() << std::endl;
+				std::cout << current->repr() << std::endl;
+				return;
+			}
+			try {
+				if (this->cuda)
+					tensor.to(at::kCUDA);
+				input.push_back(tensor);
 				/* evaluate model */
 				output = module->forward(input).toTuple()->elements();
 			}
 			catch (const std::exception& e) {
 				// this executes if f() throws std::underflow_error (base class rule)
-				std::cout << "Forward failed in thread: " << std::this_thread::get_id() << std::endl;
+				std::cout << "e2: :" << std::this_thread::get_id() << std::endl;
 				std::cout << e.what() << std::endl;
 				std::cout << state->repr() << std::endl;
 				std::cout << current->repr() << std::endl;
@@ -315,6 +321,7 @@ Cmcts::get_prob()
 		prob_sum += ptr[i];
 	}
 	if (round(prob_sum*1000.) != 1000){
+		std::cout << root_node->repr() << std::endl;
 		throw std::runtime_error("Not a distribution");
 	}
 	return b;
