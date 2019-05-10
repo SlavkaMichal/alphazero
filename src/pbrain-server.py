@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append('..')
 import site
-from config import *
+from general_config import *
 import numpy as np
 import cmcts
 import argparse
@@ -13,7 +13,6 @@ import torch
 from tools import rand_uint32
 from server import Server
 from importlib import import_module
-model_module = import_module(MODEL_MODULE)
 
 HOST = '127.0.0.1'
 PORT = 27015
@@ -32,27 +31,45 @@ def main():
     args = get_args()
 
     print("DBG:Play: starting server")
-    server = Server(args.ip, args.port)
-    mcts = cmcts.mcts()
-    param_file = tools.get_params()
-    params = torch.load(param_file, map_location='cpu')
-    model_class = getattr(model_module, MODEL_CLASS)
-    model = model_class()
-    model.load_state_dict(params['state_dict'])
-    print(param_file)
-    jit_model_name = "{}/tmp_{}.pt".format(
-            os.path.dirname(os.path.realpath(__file__)),
-            os.path.basename(param_file).replace(".pyt",''))
-    example = torch.rand(1,2,SHAPE,SHAPE)
-    model.eval()
-    with torch.no_grad():
-        traced_script_module = torch.jit.trace(model, example)
 
-    traced_script_module.save(jit_model_name)
-    mcts = cmcts.mcts(cpuct=CPUCT)
+    server = Server(args.ip, args.port)
+    # loading config file
+    config = tools.get_param_conf()
+
+    param_file = tools.get_params()
+    print("Running with parameters from: {}".format(param_file))
+    jit_model_name = ""
+    if os.path.isfile(param_file) and config.USE_NN:
+        #loading parameters
+        print("Loading model parameters from {}".format(param_file))
+        params = torch.load(param_file, map_location='cpu')
+        #creating instance of model
+        model_module = import_module(config.MODEL_MODULE)
+        model_class = getattr(model_module, config.MODEL_CLASS)
+        model = model_class(config)
+        model.load_state_dict(params['state_dict'])
+        print("Parameters from: {}".format(param_file))
+        jit_model_name = "{}/tmp_{}.pt".format(
+                os.path.dirname(os.path.realpath(__file__)),
+                os.path.basename(param_file).replace(".pyt",''))
+        example = torch.rand(1,2,SHAPE,SHAPE)
+        model.eval()
+
+        # compiling network
+        with torch.no_grad():
+            traced_script_module = torch.jit.trace(model, example)
+
+        traced_script_module.save(jit_model_name)
+    elif config.USE_NN:
+        print("No parameters found{}".format(param_file))
+        return False
+
+    # creating and configureing MCTS
+    mcts = cmcts.mcts()
     mcts.set_alpha_default()
     mcts.set_threads(THREADS)
-    mcts.set_params(jit_model_name)
+    if config.USE_NN:
+        mcts.set_params(jit_model_name)
 
     while True:
         print("DBG:Play: waiting for connection")
@@ -66,9 +83,9 @@ def main():
                 sys.stdout.flush()
                 mcts.make_movexy(x = move[0], y = move[1])
             elif cmd == cmds.MAKE_MOVE:
-                print("My move sims {}".format(SIMS))
+                print("My move sims {}".format(config.SIMS))
                 sys.stdout.flush()
-                mcts.simulate(SIMS)
+                mcts.simulate(config.SIMS)
                 print("get")
                 pi = mcts.get_prob()
                 mcts.print_node([])
