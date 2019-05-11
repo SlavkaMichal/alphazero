@@ -86,10 +86,10 @@ Cmcts::set_alpha_default()
 }
 
 void
-Cmcts::simulate(int n)
+Cmcts::simulate(int n, int timeout)
 {
-	if (n < 1)
-		throw std::runtime_error("Invalid input "+std::to_string(n)+" must be at least 1!");
+	if (n < 1 && timeout < 1)
+		throw std::runtime_error("Invalid input, sims: "+std::to_string(n)+" must be at least 1!");
 #ifndef HEUR
 	if (param_name.empty()){
 		throw std::runtime_error("Predictor missing!");
@@ -98,21 +98,32 @@ Cmcts::simulate(int n)
 
 	// divide workload
 	py::gil_scoped_release release;
+	time_t start = time(0);
 	if (threads > 1){
 		int th_num = threads;
-		if (n < th_num){
-			th_num = n;
-			n = 1;
-		}
-		else if (n % th_num == 0)
-			n = n/th_num;
-		else
-			n = n/th_num + 1;
-
 		std::thread *threads = new std::thread[th_num];
+		if (timeout == -1){
+			// if no timeout provided
+			if (n < th_num){
+				th_num = n;
+				n = 1;
+			}
+			else if (n % th_num == 0)
+				n = n/th_num;
+			else
+				n = n/th_num + 1;
 
-		for (int i = 0; i < th_num; i++){
-			threads[i] = std::thread(&Cmcts::worker, this, n);
+			for (int i = 0; i < th_num; i++){
+				threads[i] = std::thread(&Cmcts::worker, this, n);
+			}
+		} else if (n == -1){
+			// if no number of simulations provided provided
+			for (int i = 0; i < th_num; i++){
+				threads[i] = std::thread(&Cmcts::worker_timeout, this, timeout+1);
+			}
+		} else {
+			delete[] threads;
+			throw std::runtime_error("Simulate: bad arguments.");
 		}
 		for (int i = 0; i< th_num; i++){
 			threads[i].join();
@@ -121,7 +132,10 @@ Cmcts::simulate(int n)
 		delete[] threads;
 	}
 	else {
-		worker(n);
+		if (n != -1)
+			worker(n);
+		else if (timeout != -1)
+			worker_timeout(timeout+1);
 	}
 
 	return;
@@ -147,6 +161,36 @@ Cmcts::worker(int n)
 		module->to(at::kCUDA);
 
 	for (int i = 0; i < n; i++){
+		search(search_state, module);
+		search_state->clear(state);
+	}
+
+	delete search_state;
+	return;
+}
+
+void
+Cmcts::worker_timeout(int timeout)
+{
+	time_t start = time(0);
+
+	torch::NoGradGuard guard;
+	std::shared_ptr<torch::jit::script::Module> module = nullptr;
+	if (!param_name.empty()){
+		module = torch::jit::load(param_name.c_str());
+		assert(module != nullptr);
+	}
+	else{
+#ifndef HEUR
+		throw std::runtime_error("No module name set");
+#endif
+	}
+	State *search_state = new State(state);
+
+	if (this->cuda)
+		module->to(at::kCUDA);
+
+	while(timeout > (time(0) - start)){
 		search(search_state, module);
 		search_state->clear(state);
 	}
@@ -184,7 +228,7 @@ Cmcts::search(State *state, std::shared_ptr<torch::jit::script::Module> module)
 			gsl_ran_dirichlet(r, SIZE, alpha, dir_noise);
 #ifdef HEUR
 			/* with heuristic */
-			if (module == nullptr){
+			if (param_name.empty()){
 				value = -rollout();
 				current->set_prior(state, dir_noise, dir_eps);
 				break;

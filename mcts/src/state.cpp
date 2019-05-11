@@ -297,10 +297,7 @@ State::print_heur()
 {
 	for (int i = 0; i < SHAPE; i++){
 		for (int j = 0; j < SHAPE; j++){
-			if (hboard[SIZE+i*SHAPE+j]+hboard[i*SHAPE+j] == 1)
-				std::cout << "_ ";
-			else
-				std::cout << hboard[SIZE+i*SHAPE+j]+hboard[i*SHAPE+j] << " ";
+			std::cout << hboard[SIZE+i*SHAPE+j]+hboard[i*SHAPE+j] << " ";
 		}
 		std::cout << std::endl;
 	}
