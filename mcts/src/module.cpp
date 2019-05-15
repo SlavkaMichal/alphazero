@@ -51,7 +51,7 @@ PYBIND11_MODULE(cmcts, m) {
 	.def("set_cpuct", &Cmcts::set_cpuct, "Sets cpuct used to compute UCB")
 	.def("clear", &Cmcts::clear, "Clears object state")
 	.def("clear_params", &Cmcts::clear_params, "Clears predictor")
-	.def("simulate", &Cmcts::simulate, "Run n MCTS simulation")
+	.def("simulate", &Cmcts::simulate, "sims"_a=-1, "timeout"_a=-1, "Run n MCTS simulation")
 	.def("make_movexy", &Cmcts::make_movexy, "x"_a, "y"_a, "Make move by passing coordinates")
 	.def("make_move", &Cmcts::make_move, "Make move")
 	.def_property_readonly("winner", &Cmcts::get_winner, "Winner of the game")

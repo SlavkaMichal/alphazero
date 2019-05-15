@@ -392,17 +392,27 @@ float
 Cmcts::rollout()
 {
 	float value = 0;
-	State *rollout_state = new State(state);
 
-	while (rollout_state->winner == -1){
-		/* choose action */
-		rollout_state->rollout_move();
+	double a = 0, b = 0;
+	for (int i=0; i < SIZE; i++){
+		a += state->hboard.at(i);
+		b += state->hboard.at(SIZE+i);
 	}
+	if (state->player == 0)
+		value = a/b;
+	else
+		value = b/a;
+	//State *rollout_state = new State(state);
 
-	if (rollout_state->winner == 1. || rollout_state->winner == 0.)
-		value = state->player == rollout_state->winner ? 1. : -1.;
+	//while (rollout_state->winner == -1){
+	//	/* choose action */
+	//	rollout_state->rollout_move();
+	//}
 
-	delete rollout_state;
+	//if (rollout_state->winner == 1. || rollout_state->winner == 0.)
+	//	value = state->player == rollout_state->winner ? 1. : -1.;
+
+	//delete rollout_state;
 	return value;
 }
 

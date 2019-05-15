@@ -34,7 +34,7 @@ public:
 
 	void clear(void);                // restore to initial node
 	void clear_params();
-	void simulate(int n);            // run n searches
+	void simulate(int n, int timeout);            // run n searches
 
 	/* getters and setters */
 	void              set_params(std::string &file_name);
@@ -69,6 +69,7 @@ public:
 #endif
 private:
 	void worker(int n);               // run one search starting from initial node
+	void worker_timeout(int timeout); // run one search starting from initial node
 	void search(State *state, std::shared_ptr<torch::jit::script::Module> module);               // run one search starting from initial node
 
 	Node   *root_node = nullptr; // game node
