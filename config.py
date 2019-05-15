@@ -41,8 +41,13 @@ BATCH_SIZE = 32
 ##############################################################################
 #                                    mcts                                    #
 ##############################################################################
+# ONLY ONE OF SIMS or TIMEOUT CAN BE SET!
+# THE OTHER MUST BE -1
 # number of simulations performed by MCTS
-SIMS = 1000
+SIMS = -1
+
+# if timeout is -1 it will be ignored
+TIMEOUT = 5
 
 # parameter influencing generating of dirichlet noise
 # x = avg_game_length = SHAPE*2

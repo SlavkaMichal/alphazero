@@ -107,8 +107,8 @@ LOCAL_SITE_PATH = "{}/lib/python{}.{}/site-packages".format(PREFIX,sys.version_i
 PYVERSION  = True if sys.version_info[0] >= 3 and sys.version_info[1] > 4 else False
 
 # version
-MAJOR = 0
-MINOR = 6
+MAJOR = 1
+MINOR = 0
 
 # dimensions of board
 SHAPE = 13
