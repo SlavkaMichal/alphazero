@@ -31,6 +31,7 @@ def main():
     args = get_args()
 
     print("DBG:Play: starting server")
+    print(tools.str_conf())
 
     server = Server(args.ip, args.port)
     # loading config file
@@ -70,7 +71,9 @@ def main():
     mcts.set_threads(THREADS)
     if config.USE_NN:
         mcts.set_params(jit_model_name)
+    print(mcts)
 
+    cnt = 0
     while True:
         print("DBG:Play: waiting for connection")
         server.connect()
@@ -83,15 +86,12 @@ def main():
                 sys.stdout.flush()
                 mcts.make_movexy(x = move[0], y = move[1])
             elif cmd == cmds.MAKE_MOVE:
-                print("My move sims {}".format(config.SIMS))
                 sys.stdout.flush()
-                mcts.simulate(config.SIMS)
-                print("get")
+                mcts.simulate(sims=config.SIMS, timeout=config.TIMEOUT)
                 pi = mcts.get_prob()
-                mcts.print_node([])
+                #pi = mcts.heur().reshape(2,-1)
                 move = np.argmax(pi)
                 mcts.make_move(move)
-                print("made move")
                 server.make_move((move%SHAPE,move//SHAPE))
             elif cmd == cmds.LOAD_MOVE:
                 print("Loading move")
@@ -105,6 +105,8 @@ def main():
                 sys.stdout.flush()
                 print(move)
                 #assert move == SHAPE
+                np.save("game{}".format(cnt), mcts.get_board())
+                cnt += 1
                 mcts.clear()
             elif cmd == cmds.END:
                 print("End")

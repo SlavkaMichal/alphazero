@@ -28,28 +28,28 @@ class Server:
 
     def connect(self):
         self.connection, caddr = self.sock.accept()
-        print("DBG:Server: Connected to "+caddr[0]+":"+str(caddr[1]))
+        #print("DBG:Server: Connected to "+caddr[0]+":"+str(caddr[1]))
 
     def make_move(self, move):
         self.connection.sendall(bytearray(move))
-        print("DBG:Server: Making move x:"+str(move[0])+" y:"+str(move[1]))
+        #print("DBG:Server: Making move x:"+str(move[0])+" y:"+str(move[1]))
 
     def get_cmd(self):
-        print("DBG:Server: get_cmd()")
+        #print("DBG:Server: get_cmd()")
         data = self.connection.recv(32)
         if len(data) == 0:
-            print("DBG:Server: Game is over ")
+            #print("DBG:Server: Game is over ")
             return END, None
 
         cmd = data[0]
-        print("DBG:Server: '"+str(data)+"'")
+        #print("DBG:Server: '"+str(data)+"'")
         sys.stdout.flush()
 
         if cmd == LOAD_MOVE:
             self.set_player = True
             return cmd, (data[1], data[2], data[3])
         if cmd == OP_MOVE:
-            print("DBG:Server: Oponents move x:"+str(data[1])+" y:"+str(data[2]))
+            #print("DBG:Server: Oponents move x:"+str(data[1])+" y:"+str(data[2]))
             return cmd, (data[1], data[2])
         if cmd == INITIALIZE:
             return cmd, data[1]
