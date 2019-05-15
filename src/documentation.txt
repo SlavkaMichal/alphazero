@@ -1,0 +1,41 @@
+Python source code
+
+Python scripts:
+train.py
+This file contains code for training of the neural network.
+
+eval.py
+Contains code for evaluating differnt generations of parameters, using MCTS extension.
+
+self_play.py
+Contains code for data generation, using MCTS extension.
+
+model.py
+Contains definition of neural network.
+
+tools.py
+Various functions, which were placed separately because they are used by
+multiple script or to make the scripts little bit clearer. There are functions
+generating file names for data, parameters, and log files. Functions
+manipulating parameters and data and configuration files.
+
+server.py
+Contains managment of TCP server for connecting to 'pbrain-client-nd'.
+
+pbrain-server.py
+Uses server from 'server.py' and cmcts extension to comunicate with Piskvork.
+
+ploting.py
+Functions for plotting board positions and probabilities.
+
+debug.py
+Short script that includes all necesary modules and initializes neural network
+and the Monte Carlo tree search.
+
+pbrain-client-nd.exe
+Puppet AI for Piskvork comunicating with python server.
+
+piskvork.exe
+Piskvor tournament manger
+
+

@@ -1,0 +1,118 @@
+Monte Carlo tree search
+
+1. Build system
+I use python setuptools to create and install `cmcts` extension. Setuptools are
+invoking cmake for building the souce code. Currentyly cmake is not working
+with python virtual enviroment script so for installation sourcing `env.sh`
+script is necessary. Build system also creates a binary, which could
+potentially replace python code but I used it only to check for memory leaks.
+
+2. Code structure
+Directory mcts/src/ contains all c++ code for this extension. Each header
+file defines one class, however only one class is rachable from Python. Byndigs
+to python are defined in module.cpp.
+
+2.1. Classes
+
+Cmcts
+Class with binding to Python is called Cmcts. This class hold informations
+about current state of the search. With bindings you can set properties of the
+search algorithm and calls the search. It also provides methods for
+introspection of state of the search.
+This class has pointer to a root node and a corresponding state, from which
+simulations are performed. While simulation runs in the same tree starting from
+the root node,which is expanded, each thread has its own copy of the state,
+which is then discarded.
+
+State
+This class contains representation of a board and game logic. I has mehods for
+manipulating state, checking validity of moves and checks for winning
+positions. To change the MCTS for a different game this is the only class that
+needs to be changed. This class also holds some statistics about game, move
+count and sequence of moves that has been played.
+
+Node
+This class implements a tree structure. It contains pointers to next states and
+statistics required for selecting nodes in simulations. Each node represents a
+state but while for a simulation current state is copied and after simulation
+it is thrown away nodes are not destroyed after simulation nor after move
+selection. Each node encodes board position encoded in edges leading to it from
+a root node, but for practical reason, states are not reconstructed from the
+edges from the root node. After selecting a move by an agent parts of the tree
+in different branches from the selected one are destroyed.
+
+2.2 Using neural network
+To use neural network, first parameters from python have to be 'just in time'
+compiled.  To compile parameters use torch.jit.trace(model, example_input) and
+save it to a file from where it can be loaded by instance of MCTS. Then use
+'set_params' and pass it location and file name of the compiled and saved
+parameters.
+
+3. Bindings
+The only interface exposed to python is Cmcts class. Bindings use getters and
+setters to define and retrieve properties of the exposed class. Python module
+is called cmcts and the Monte Carlo tree search class can be instantiated
+followingly:
+mcts = cmcts.mcts()
+
+These properties can be set and read:
+Parameters for neural network:
+	mcts.params      string
+Epsilon
+	mcts.eps         float
+Use GPU
+	mcts.cuda        boolean
+Alpha
+	mcts.alpha       float
+Number of threads
+	mcts.threads     int
+Player to move
+	mcts.player      int
+CPUCT constant
+	mcts.cpuct       float
+
+Read only properties:
+Total number of moves in current game
+	mcts.move_cnt
+Winner is -1 if there is no winning sequence, 0 if first player won, 1 if second player won
+	mcts.winner
+Return string representation of current state
+	mcts.__repr__
+
+Extension provides these methods:
+Set path to compiled parameters
+	mcts.set_params(str)
+Set alpha
+	mcts.set_alpha(int)
+Set alpha to default value
+	mcts.set_alpha_default()
+Set number of threads to be used for simulations
+	mcts.set_threads(int)
+Set CPUCT constant
+	mcts.set_cpuct(float)
+Reset the game
+	mcts.clear()
+Removes parameters
+	mcts.clear_params()
+Run NUM of simulations or run simulations until TIMEOUT expires
+	mcts.simulate(int NUM, int TIMEOUT)
+Make move using x,y coordinates
+	mcts.make_movexy(int, int)
+Make move using absolute position on board
+	mcts.make_move(int)
+Print a node from tree, takes list of actions leading to the node
+	mcts.print_node(list)
+Prints U values for actions from a node, takes list of actions leading to the node
+	mcts.print_u(list)
+Print heuristic values of root node
+	mcts.print_heur()
+Return numpy array with heuristic
+	mcts.heur()
+Get board representation in a numpy array
+	mcts.get_board()
+Get probabilities from search
+	mcts.get_prob()
+
+
+To display documentation for the module help(cmcts) can be used, which will
+show signatures of method and short descriptions.

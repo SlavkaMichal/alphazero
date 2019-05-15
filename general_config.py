@@ -29,6 +29,11 @@ EVAL_TRESHOLD = 0.6
 # how many times per iteration will show progress
 VIEW_STEP = 20
 
+# number of generations to train from
+# size of window is increasing by one every n generations
+# (starting window, max window, n)
+WINDOW = (4,20,2)
+
 ##############################################################################
 #                                   general                                  #
 ##############################################################################
@@ -51,11 +56,6 @@ LOG_PATH = "{}/logs".format(ROOT)
 
 # file containing path to best parameters
 PARAM_BEST = "{}/.param_best".format(ROOT)
-
-# number of generations to train from
-# size of window is increasing by one every n generations
-# (starting window, max window, n)
-WINDOW = (4,20,2)
 
 # load config
 LOAD_CONFIG = ""
